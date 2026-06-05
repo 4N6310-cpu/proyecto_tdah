@@ -1,0 +1,195 @@
+<!-- Navigation Bar -->
+<nav class="dashboard-navbar">
+  <div class="brand">
+    <span>🧠</span> ADHD-Vision
+  </div>
+  <div class="navbar-profile">
+    <span id="user-display" class="user-badge">Cargando...</span>
+    <button id="logout-btn" class="btn-logout">Cerrar Sesión</button>
+  </div>
+</nav>
+
+<!-- Main Container -->
+<div class="dashboard-container">
+  
+  <!-- VIEW 1: PATIENTS LIST -->
+  <div id="patients-list-view">
+    <h1 class="section-title">Pacientes Asignados</h1>
+    
+    <div class="search-bar-container">
+      <input type="text" id="patient-search" class="form-control" placeholder="🔍 Buscar paciente por nombre...">
+    </div>
+    
+    <div id="patients-grid" class="patient-grid">
+      <!-- Dynamic patient cards will be injected here -->
+      <div class="loader-container">
+        <div class="spinner"></div>
+        <p>Cargando pacientes...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- VIEW 2: CLINICAL DOSSIER & VIDEOS -->
+  <div id="patient-detail-view" class="hidden">
+    <button id="back-to-patients-btn" class="btn btn-secondary btn-back">
+      ⬅️ Volver a Pacientes
+    </button>
+    
+    <!-- Banner for Patient Information -->
+    <div id="patient-banner" class="patient-header-banner">
+      <!-- Dynamic header populated by JS -->
+    </div>
+    
+    <div class="dossier-layout">
+      <!-- Left Column: History & Evolution -->
+      <div class="dossier-left">
+        
+        <!-- Metrics Averages Card -->
+        <div class="panel-card">
+          <h2 class="panel-title">Métricas Médicas Promedio</h2>
+          <div class="metrics-summary">
+            <!-- Attention Focus -->
+            <div class="metric-bar-group">
+              <div class="metric-label-row">
+                <span>Foco Atencional Promedio</span>
+                <span id="avg-attention-val">0%</span>
+              </div>
+              <div class="metric-progress-bg">
+                <div id="avg-attention-bar" class="metric-progress-fill bg-success" style="width: 0%"></div>
+              </div>
+            </div>
+            
+            <!-- Distraction Ratio -->
+            <div class="metric-bar-group">
+              <div class="metric-label-row">
+                <span>Porcentaje de Distracción</span>
+                <span id="avg-distraction-val">0%</span>
+              </div>
+              <div class="metric-progress-bg">
+                <div id="avg-distraction-bar" class="metric-progress-fill bg-warning" style="width: 0%"></div>
+              </div>
+            </div>
+            
+            <!-- Hyperactivity (Fidgeting) -->
+            <div class="metric-bar-group">
+              <div class="metric-label-row">
+                <span>Nivel de Hiperactividad (Fidgeting)</span>
+                <span id="avg-fidgeting-val">0 / 10</span>
+              </div>
+              <div class="metric-progress-bg">
+                <div id="avg-fidgeting-bar" class="metric-progress-fill bg-danger" style="width: 0%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Historical Chart Card -->
+        <div class="panel-card">
+          <h2 class="panel-title">Evolución de Atención e Hiperactividad</h2>
+          <div class="chart-container">
+            <canvas id="evolution-chart"></canvas>
+          </div>
+        </div>
+        
+        <!-- Session List Card -->
+        <div class="panel-card">
+          <h2 class="panel-title">Historial de Sesiones Evaluadas</h2>
+          <div id="sessions-accordion-container" class="session-list">
+            <!-- Dynamic session items will be injected here -->
+          </div>
+        </div>
+        
+        <!-- Medical Notes Card -->
+        <div class="panel-card">
+          <h2 class="panel-title">Notas del Expediente</h2>
+          <textarea id="patient-notes-field" class="form-control" disabled></textarea>
+        </div>
+      </div>
+      
+      <!-- Right Column: Controls and Uploads -->
+      <div class="dossier-right">
+        <div class="panel-card">
+          <h2 class="panel-title">Nueva Sesión de Análisis</h2>
+          
+          <!-- Tabs Navigation -->
+          <div class="tabs-header">
+            <div id="tab-btn-upload" class="tab-btn active" onclick="switchAnalysisTab('upload')">🎥 Subir Video Real</div>
+            <div id="tab-btn-simulate" class="tab-btn" onclick="switchAnalysisTab('simulate')">🤖 Simular Análisis IA</div>
+          </div>
+          
+          <!-- TAB 1: UPLOAD VIDEO -->
+          <div id="tab-pane-upload" class="tab-pane active">
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">
+              Sube una sesión de video en formato MP4 o AVI para analizar la mirada y el movimiento con algoritmos de visión artificial.
+            </p>
+            
+            <div class="upload-dropzone" onclick="document.getElementById('video-input').click()">
+              <span class="upload-icon">📁</span>
+              <span class="upload-text">Haz clic para buscar un archivo de video</span>
+              <span id="video-filename" class="upload-text" style="display:block; font-weight:600; margin-top:8px; color:var(--secondary-color);"></span>
+              <input type="file" id="video-input" accept="video/mp4, video/avi" style="display: none;">
+            </div>
+            
+            <button id="run-analysis-btn" class="btn" disabled>Ejecutar Análisis de Video</button>
+          </div>
+          
+          <!-- TAB 2: CLINICAL SIMULATION -->
+          <div id="tab-pane-simulate" class="tab-pane">
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">
+              Ajusta parámetros estadísticos para generar un análisis clínico simulado y registrarlo inmediatamente.
+            </p>
+            
+            <!-- Video Name Input -->
+            <div class="form-group">
+              <label for="sim-name">Nombre de Video Simulado</label>
+              <input type="text" id="sim-name" class="form-control" value="sesion_terapia_simulada.mp4">
+            </div>
+            
+            <!-- Attention Slider -->
+            <div class="range-slider-group">
+              <div class="range-slider-row">
+                <span>Atención Media Sostenida</span>
+                <span id="sim-attention-lbl" style="font-weight:600; color:var(--success);">68%</span>
+              </div>
+              <input type="range" id="sim-attention" class="range-slider" min="20" max="100" value="68" oninput="document.getElementById('sim-attention-lbl').innerText = this.value + '%'">
+            </div>
+            
+            <!-- Fidgeting Slider -->
+            <div class="range-slider-group">
+              <div class="range-slider-row">
+                <span>Frecuencia de Fidgeting / Hiperactividad</span>
+                <span id="sim-fidgeting-lbl" style="font-weight:600; color:var(--danger);">5.5 / 10</span>
+              </div>
+              <input type="range" id="sim-fidgeting" class="range-slider" min="0" max="10" step="0.1" value="5.5" oninput="document.getElementById('sim-fidgeting-lbl').innerText = this.value + ' / 10'">
+            </div>
+            
+            <!-- Duration Slider -->
+            <div class="range-slider-group">
+              <div class="range-slider-row">
+                <span>Duración de Actividad (segundos)</span>
+                <span id="sim-duration-lbl" style="font-weight:600; color:var(--primary-color);">120s</span>
+              </div>
+              <input type="range" id="sim-duration" class="range-slider" min="30" max="600" step="10" value="120" oninput="document.getElementById('sim-duration-lbl').innerText = this.value + 's'">
+            </div>
+            
+            <button id="run-simulation-btn" class="btn">Disparar Simulación de Comportamiento</button>
+          </div>
+          
+          <!-- Common Analysis Progress Bar -->
+          <div id="analysis-progress-container" class="progress-container hidden">
+            <div class="progress-label">
+              <span id="progress-status">Procesando frames con OpenCV...</span>
+              <span id="progress-percentage">0%</span>
+            </div>
+            <div class="metric-progress-bg">
+              <div id="analysis-progress-bar" class="metric-progress-fill bg-success" style="width: 0%"></div>
+            </div>
+          </div>
+          
+          <div id="analysis-alert" class="alert alert-error hidden" style="margin-top: 15px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+</div>
