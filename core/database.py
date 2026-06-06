@@ -116,7 +116,7 @@ def get_sesiones_by_paciente(id_paciente):
     if not conexion: return []
     
     cursor = conexion.cursor(dictionary=True)
-    query = "SELECT id, id_paciente, fecha_hora, duracion, indice_atencion, hiperactividad, distraccion FROM sesiones WHERE id_paciente = %s ORDER BY fecha_hora DESC"
+    query = "SELECT id, id_paciente, fecha_hora, duracion, indice_atencion, hiperactividad, distraccion, notas FROM sesiones WHERE id_paciente = %s ORDER BY fecha_hora DESC"
     
     try:
         cursor.execute(query, (id_paciente,))
@@ -176,7 +176,8 @@ def get_sesiones_by_paciente(id_paciente):
                 "diagnostico_auto": diag,
                 "video_origen": f"sesion_video_{r['id']}.mp4",
                 "timeline": timeline,
-                "intervalos_distraccion": []
+                "intervalos_distraccion": [],
+                "notas": r["notas"]
             })
         return sesiones_formateadas
     except Error as e:
@@ -276,7 +277,7 @@ def get_sesion_by_id(session_id):
     if not conexion: return None
     
     cursor = conexion.cursor(dictionary=True)
-    query = "SELECT id, id_paciente, fecha_hora, duracion, indice_atencion, hiperactividad, distraccion FROM sesiones WHERE id = %s"
+    query = "SELECT id, id_paciente, fecha_hora, duracion, indice_atencion, hiperactividad, distraccion, notas FROM sesiones WHERE id = %s"
     
     try:
         cursor.execute(query, (session_id,))
@@ -335,7 +336,8 @@ def get_sesion_by_id(session_id):
                 "diagnostico_auto": diag,
                 "video_origen": f"sesion_video_{r['id']}.mp4",
                 "timeline": timeline,
-                "intervalos_distraccion": []
+                "intervalos_distraccion": [],
+                "notas": r["notas"]
             }
         return None
     except Error as e:
@@ -423,6 +425,23 @@ def delete_paciente(paciente_id):
         return True
     except Error as e:
         print(f"Error al eliminar paciente: {e}")
+        return False
+    finally:
+        cursor.close()
+        conexion.close()
+
+def update_session_notas(session_id, notas):
+    """Actualiza las notas de una sesión de evaluación."""
+    conexion = conectar_db()
+    if not conexion: return False
+    cursor = conexion.cursor()
+    query = "UPDATE sesiones SET notas = %s WHERE id = %s"
+    try:
+        cursor.execute(query, (notas, session_id))
+        conexion.commit()
+        return True
+    except Error as e:
+        print(f"Error al actualizar notas de sesión: {e}")
         return False
     finally:
         cursor.close()

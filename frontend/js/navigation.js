@@ -476,7 +476,7 @@ function renderDossier(paciente) {
   document.getElementById('analysis-progress-container').classList.add('hidden');
 
   // 3. Populate Medical Notes
-  document.getElementById('patient-notes-field').value = paciente.notas || 'Sin notas registradas.';
+  document.getElementById('patient-notes-field').value = paciente.notas || '';
 
   // 4. Calculate Average Metrics
   const sessions = paciente.historial_analisis || [];
@@ -659,6 +659,15 @@ function renderSessionsList(sessions) {
           <strong>Impresión Clínica Automatizada:</strong><br>
           ${escapeHTML(ses.diagnostico_auto)}
         </div>
+
+        <div class="session-notes-section" style="margin-top: 15px; margin-bottom: 15px; text-align: left;">
+          <label for="session-notes-${ses.id}" style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 5px; color: var(--text-dark);">Notas y Observaciones de la Sesión:</label>
+          <textarea id="session-notes-${ses.id}" class="form-control" placeholder="Escribe observaciones clínicas sobre esta sesión..." style="min-height: 80px; resize: vertical; margin-bottom: 8px;">${escapeHTML(ses.notas || '')}</textarea>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <button class="btn btn-secondary" style="width: auto; padding: 6px 14px; font-size: 13px;" onclick="saveSessionNotes(${ses.id})">Guardar Notas de Sesión</button>
+            <span id="session-notes-status-${ses.id}" style="font-size: 12px; font-weight: 600;"></span>
+          </div>
+        </div>
         
         <a href="/api/reportes/pdf/${ses.id}" class="btn btn-secondary" style="width: auto; padding: 8px 15px; font-size: 13px;" download>
           📥 Descargar Reporte PDF Clínico
@@ -679,6 +688,82 @@ function toggleAccordion(id) {
   } else {
     content.classList.add('hidden');
     arrow.innerText = '▼';
+  }
+}
+
+async function savePatientNotes() {
+  if (!currentPatient) return;
+  const notesField = document.getElementById('patient-notes-field');
+  const newNotes = notesField.value.trim();
+  const statusSpan = document.getElementById('patient-notes-status');
+  const saveBtn = document.getElementById('save-patient-notes-btn');
+
+  saveBtn.disabled = true;
+  statusSpan.innerText = 'Guardando...';
+  statusSpan.style.color = 'var(--text-muted)';
+
+  try {
+    const tutorPhone = (currentPatient.celular === 'no tiene' || !currentPatient.celular) ? '' : currentPatient.celular;
+    
+    await API.updatePaciente(
+      currentPatient.id,
+      currentPatient.nombre,
+      currentPatient.fecha_nacimiento,
+      newNotes,
+      currentPatient.tutor,
+      tutorPhone,
+      null,
+      currentPatient.genero
+    );
+
+    currentPatient.notas = newNotes;
+    statusSpan.innerText = '✓ Guardado correctamente';
+    statusSpan.style.color = 'var(--success)';
+  } catch (err) {
+    statusSpan.innerText = '✗ Error: ' + err.message;
+    statusSpan.style.color = 'var(--danger)';
+  } finally {
+    saveBtn.disabled = false;
+    setTimeout(() => {
+      if (statusSpan.innerText.includes('Guardado') || statusSpan.innerText.includes('Error')) {
+        statusSpan.innerText = '';
+      }
+    }, 3000);
+  }
+}
+
+async function saveSessionNotes(sessionId) {
+  const notesField = document.getElementById(`session-notes-${sessionId}`);
+  if (!notesField) return;
+  const newNotes = notesField.value.trim();
+  const statusSpan = document.getElementById(`session-notes-status-${sessionId}`);
+  const container = document.getElementById(`accordion-s-${sessionId}`);
+  const saveBtn = container ? container.querySelector('.session-notes-section button') : null;
+
+  if (saveBtn) saveBtn.disabled = true;
+  statusSpan.innerText = 'Guardando...';
+  statusSpan.style.color = 'var(--text-muted)';
+
+  try {
+    await API.updateSessionNotes(sessionId, newNotes);
+
+    if (currentPatient && currentPatient.historial_analisis) {
+      const session = currentPatient.historial_analisis.find(s => s.id === sessionId);
+      if (session) {
+        session.notas = newNotes;
+      }
+    }
+
+    statusSpan.innerText = '✓ Guardado';
+    statusSpan.style.color = 'var(--success)';
+  } catch (err) {
+    statusSpan.innerText = '✗ Error: ' + err.message;
+    statusSpan.style.color = 'var(--danger)';
+  } finally {
+    if (saveBtn) saveBtn.disabled = false;
+    setTimeout(() => {
+      statusSpan.innerText = '';
+    }, 3000);
   }
 }
 

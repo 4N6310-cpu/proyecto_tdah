@@ -151,5 +151,23 @@ const API = {
       throw new Error(data.message || 'Error al eliminar paciente');
     }
     return data;
+  },
+
+  /**
+   * Update notes/observations for a specific evaluation session
+   */
+  async updateSessionNotes(sessionId, notas) {
+    const response = await fetch(`${API_BASE}/api/sesiones/${sessionId}/notas`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ notas })
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.message || 'Error al actualizar notas de la sesión');
+    }
+    return data;
   }
 };

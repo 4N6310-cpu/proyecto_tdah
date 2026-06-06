@@ -16,7 +16,8 @@ from core.database import (
     get_sesion_by_id,
     add_paciente,
     update_paciente,
-    delete_paciente
+    delete_paciente,
+    update_session_notas
 )
 
 # Import services and helpers
@@ -193,6 +194,23 @@ def api_sesiones():
         })
     except Exception as e:
         return jsonify({"status": "error", "message": f"Error del servidor: {str(e)}"}), 500
+
+@app.route('/api/sesiones/<int:id>/notas', methods=['PUT'])
+def api_update_session_notes(id):
+    """Actualiza las observaciones/notas de una sesión específica."""
+    data = request.json
+    if not data or 'notas' not in data:
+        return jsonify({"status": "error", "message": "Parámetro 'notas' es requerido."}), 400
+        
+    notas = data['notas']
+    try:
+        success = update_session_notas(id, notas)
+        if success:
+            return jsonify({"status": "success", "message": "Notas de sesión actualizadas correctamente."}), 200
+        else:
+            return jsonify({"status": "error", "message": "No se pudo actualizar las notas de sesión."}), 500
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/api/analisis/simular', methods=['POST'])
 def api_analisis_simular():
