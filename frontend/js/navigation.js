@@ -26,7 +26,7 @@ function initApp() {
 async function navigateTo(viewName) {
   const container = document.getElementById('app-container');
   currentView = viewName;
-  
+
   // Show base loader
   container.innerHTML = `
     <div class="loader-container">
@@ -45,10 +45,10 @@ async function navigateTo(viewName) {
       const response = await fetch('dashboard.html');
       const html = await response.text();
       container.innerHTML = html;
-      
+
       const evalData = Auth.getEvaluador();
       document.getElementById('user-display').innerText = `${evalData.nombre} (${evalData.especialidad})`;
-      
+
       bindDashboardEvents();
       loadPatients();
     }
@@ -74,10 +74,10 @@ function bindLoginEvents() {
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     alertEl.classList.add('hidden');
-    
+
     const username = document.getElementById('username').value.trim();
     const password = document.getElementById('password').value;
-    
+
     // UI feedback
     const submitBtn = form.querySelector('button[type="submit"]');
     const originalText = submitBtn.innerText;
@@ -94,7 +94,7 @@ function bindLoginEvents() {
         const res = await API.login(username, password);
         sessionUser = res.user;
       }
-      
+
       Auth.login(sessionUser);
       navigateTo('dashboard');
     } catch (err) {
@@ -187,6 +187,7 @@ function renderPatients(list) {
         <h3 class="patient-name">${escapeHTML(pac.nombre)}</h3>
         <p class="patient-details">
           Edad: ${pac.edad} años | Género: ${escapeHTML(pac.genero)}<br>
+          Nombre Tutor: ${escapeHTML(pac.nombre_tutor || 'No registrado')}<br>
           Contacto: ${escapeHTML(pac.contacto || 'No registrado')}
         </p>
         <span class="patient-stats">Ver expediente clínico ➡️</span>
@@ -196,7 +197,7 @@ function renderPatients(list) {
 }
 
 function filterPatients(query) {
-  const filtered = patientsData.filter(pac => 
+  const filtered = patientsData.filter(pac =>
     pac.nombre.toLowerCase().includes(query.toLowerCase())
   );
   renderPatients(filtered);
@@ -220,7 +221,7 @@ async function openPatientDossier(patientId) {
     const data = await API.getSesiones(patientId);
     currentPatient = data.paciente;
     currentPatient.historial_analisis = data.sesiones || [];
-    
+
     renderDossier(currentPatient);
   } catch (err) {
     document.getElementById('patient-banner').innerHTML = `
@@ -237,8 +238,7 @@ function renderDossier(paciente) {
     <span style="font-size: 13px; text-transform: uppercase; font-weight: 600; opacity: 0.8;">Ficha de Expediente Clínico</span>
     <h1 class="patient-header-title" style="color: white !important;">${escapeHTML(paciente.nombre)}</h1>
     <p class="patient-header-desc">
-      Edad: ${paciente.edad} años | Género: ${escapeHTML(paciente.genero)} | Tutor: ${escapeHTML(paciente.tutor)} | Teléfono: ${escapeHTML(paciente.contacto)}
-    </p>
+      Edad: ${paciente.edad} años | Género: ${escapeHTML(paciente.genero)} | Tutor: ${escapeHTML(paciente.tutor)} | Teléfono: ${escapeHTML(paciente.celular)}    </p>
   `;
 
   // 2. Clear upload elements
@@ -261,7 +261,7 @@ function renderDossier(paciente) {
     const sumAtt = sessions.reduce((acc, s) => acc + s.atencion_porcentaje, 0);
     const sumFid = sessions.reduce((acc, s) => acc + s.fidgeting_score, 0);
     const sumDist = sessions.reduce((acc, s) => acc + s.distraccion, 0);
-    
+
     avgAttention = Math.round(sumAtt / sessions.length);
     avgFidgeting = parseFloat((sumFid / sessions.length).toFixed(1));
     avgDistraction = Math.round((sumDist / sessions.length) * 100);
@@ -270,10 +270,10 @@ function renderDossier(paciente) {
   // Set Progress bar values
   document.getElementById('avg-attention-val').innerText = `${avgAttention}%`;
   document.getElementById('avg-attention-bar').style.width = `${avgAttention}%`;
-  
+
   document.getElementById('avg-distraction-val').innerText = `${avgDistraction}%`;
   document.getElementById('avg-distraction-bar').style.width = `${avgDistraction}%`;
-  
+
   document.getElementById('avg-fidgeting-val').innerText = `${avgFidgeting} / 10`;
   document.getElementById('avg-fidgeting-bar').style.width = `${avgFidgeting * 10}%`;
 
@@ -302,7 +302,7 @@ function renderDossier(paciente) {
  */
 function renderEvolutionChart(sessions) {
   const ctx = document.getElementById('evolution-chart').getContext('2d');
-  
+
   // Clean old instance to prevent hover artifacts
   if (window.myEvolutionChart) {
     window.myEvolutionChart.destroy();
@@ -311,7 +311,7 @@ function renderEvolutionChart(sessions) {
   if (sessions.length === 0) {
     ctx.font = '14px Outfit';
     ctx.textAlign = 'center';
-    ctx.fillText('Sin datos de sesiones anteriores para graficar.', ctx.canvas.width/2, ctx.canvas.height/2);
+    ctx.fillText('Sin datos de sesiones anteriores para graficar.', ctx.canvas.width / 2, ctx.canvas.height / 2);
     return;
   }
 
@@ -445,7 +445,7 @@ function toggleAccordion(id) {
   const accordion = document.getElementById(id);
   const content = accordion.querySelector('.session-content');
   const arrow = accordion.querySelector('.session-header-metrics span:last-child');
-  
+
   if (content.classList.contains('hidden')) {
     content.classList.remove('hidden');
     arrow.innerText = '▲';
@@ -499,14 +499,14 @@ async function executeVideoAnalysis() {
   progressBar.style.width = '0%';
   progressPercentage.innerText = '0%';
   progressStatus.innerText = 'Subiendo video e iniciando OpenCV/MediaPipe...';
-  
+
   const timer = setInterval(() => {
     if (pct < 92) {
       pct += Math.floor(Math.random() * 5) + 2;
       pct = Math.min(pct, 92);
       progressBar.style.width = `${pct}%`;
       progressPercentage.innerText = `${pct}%`;
-      
+
       if (pct > 70) {
         progressStatus.innerText = 'Motor de comportamiento estimando postura de la cara y fidgeting...';
       } else if (pct > 35) {
@@ -519,12 +519,12 @@ async function executeVideoAnalysis() {
 
   try {
     const res = await API.subirVideo(currentPatient.id, file);
-    
+
     clearInterval(timer);
     progressBar.style.width = '100%';
     progressPercentage.innerText = '100%';
     progressStatus.innerText = '¡Análisis de video completado! Guardando en MySQL feria...';
-    
+
     setTimeout(async () => {
       // Reload patient dossier to reflect changes
       await openPatientDossier(currentPatient.id);
@@ -559,7 +559,7 @@ async function executeSimulation() {
   progressBar.style.width = '0%';
   progressPercentage.innerText = '0%';
   progressStatus.innerText = 'Corriendo algoritmos clínicos estocásticos...';
-  
+
   let pct = 0;
   const timer = setInterval(() => {
     if (pct < 90) {
@@ -582,7 +582,7 @@ async function executeSimulation() {
     progressBar.style.width = '100%';
     progressPercentage.innerText = '100%';
     progressStatus.innerText = 'Simulación completada y guardada en MySQL...';
-    
+
     setTimeout(async () => {
       // Reload patient dossier
       await openPatientDossier(currentPatient.id);
@@ -602,7 +602,7 @@ async function executeSimulation() {
    ===================================================================== */
 function escapeHTML(str) {
   if (!str) return '';
-  return str.replace(/[&<>'"]/g, 
+  return str.replace(/[&<>'"]/g,
     tag => ({
       '&': '&amp;',
       '<': '&lt;',

@@ -49,30 +49,51 @@ def get_pacientes_by_evaluador(id_evaluador):
     if not conexion: return []
     
     cursor = conexion.cursor(dictionary=True)
-    query = "SELECT id, nombre, fecha_nacimiento, genero, id_evaluador FROM pacientes WHERE id_evaluador = %s"
+    query = "SELECT id, nombre, fecha_nacimiento, genero, id_evaluador, tutor, numero_de_tutor FROM pacientes WHERE id_evaluador = %s"
     
     try:
         cursor.execute(query, (id_evaluador,))
         pacientes = cursor.fetchall()
-        # Enriquecer con edad para compatibilidad con la vista
+        
         for pac in pacientes:
+            tutor_real = pac.get('tutor')
+            telefono_real = pac.get('numero_de_tutor')
+
+            # 1. Guardamos el nombre del tutor
+            pac["tutor_nombre"] = tutor_real if tutor_real else "No asignado"
+
+            # 2. Guardamos el celular de forma independiente
+            if telefono_real and str(telefono_real).strip() != "":
+                pac["tutor_celular"] = telefono_real
+            else:
+                pac["tutor_celular"] = "No tiene"
+            
+            # 3. Procesamiento seguro de la Edad
             fecha_nac = pac["fecha_nacimiento"]
             if fecha_nac:
+                # Si la base de datos devuelve la fecha como string, la convertimos a objeto date
+                if isinstance(fecha_nac, str):
+                    fecha_nac = datetime.datetime.strptime(fecha_nac, "%Y-%m-%d").date()
+                
                 hoy = datetime.date.today()
                 pac["edad"] = hoy.year - fecha_nac.year - ((hoy.month, hoy.day) < (fecha_nac.month, fecha_nac.day))
             else:
-                pac["edad"] = 0
-            pac["tutor"] = f"Tutor de {pac['nombre']}"
-            pac["contacto"] = "+591 78901234"
-            pac["notas"] = "Paciente en seguimiento de comportamiento."
+                pac["edad"] = 0 
+            
+            # 4. Mantenemos 'contacto' por si alguna otra vista vieja lo sigue usando
+            pac["nombre_tutor"] = f"{pac['tutor_nombre']}"
+            pac["contacto"] = f"{pac['tutor_celular']}"
+            
+            # 5. Notas predeterminadas
+            pac["notas"] = "Paciente en seguimiento de comportamiento." 
+
         return pacientes
     except Error as e:
         print(f"Error al obtener pacientes: {e}")
         return []
     finally:
         cursor.close()
-        conexion.close()
-
+        conexion.close()    
 def generar_timeline_sintetico(duracion, atencion_pct, fidgeting_val):
     import random
     timeline = []
@@ -170,7 +191,7 @@ def get_paciente_by_id(paciente_id):
     if not conexion: return None
     
     cursor = conexion.cursor(dictionary=True)
-    query = "SELECT id, nombre, fecha_nacimiento, genero, id_evaluador FROM pacientes WHERE id = %s"
+    query = "SELECT id, nombre, fecha_nacimiento, genero, id_evaluador,tutor,numero_de_tutor FROM pacientes WHERE id = %s"
     
     try:
         cursor.execute(query, (paciente_id,))
@@ -183,8 +204,9 @@ def get_paciente_by_id(paciente_id):
             else:
                 paciente["edad"] = 0
             
-            paciente["tutor"] = f"Tutor de {paciente['nombre']}"
-            paciente["contacto"] = "+591 78901234"
+            paciente["tutor"] = paciente['tutor']
+            numero = paciente.get('numero_de_tutor')
+            paciente["celular"] = str(numero) if numero is not None else "no tiene"
             paciente["notas"] = "Paciente en seguimiento de comportamiento. Se observa inquietud motora en entornos de concentración estructurada."
             paciente["historial_analisis"] = get_sesiones_by_paciente(paciente_id)
             
