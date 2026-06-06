@@ -345,7 +345,7 @@ def get_sesion_by_id(session_id):
         cursor.close()
         conexion.close()
 
-def add_paciente(nombre, fecha_nacimiento, historial_clinico, id_evaluador, tutor, numero_de_tutor, foto_perfil=None):
+def add_paciente(nombre, fecha_nacimiento, historial_clinico, id_evaluador, tutor, numero_de_tutor, foto_perfil=None, genero='No especificado'):
     """Inserta un nuevo paciente en la base de datos."""
     conexion = conectar_db()
     if not conexion: return False
@@ -372,7 +372,7 @@ def add_paciente(nombre, fecha_nacimiento, historial_clinico, id_evaluador, tuto
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
     """
     try:
-        cursor.execute(query, (nuevo_id, nombre, fecha_nacimiento, 'No especificado', id_evaluador, tutor, num_tutor, historial_clinico, foto_perfil))
+        cursor.execute(query, (nuevo_id, nombre, fecha_nacimiento, genero, id_evaluador, tutor, num_tutor, historial_clinico, foto_perfil))
         conexion.commit()
         return True
     except Error as e:
@@ -382,7 +382,7 @@ def add_paciente(nombre, fecha_nacimiento, historial_clinico, id_evaluador, tuto
         cursor.close()
         conexion.close()
 
-def update_paciente(paciente_id, nombre, fecha_nacimiento, historial_clinico, tutor, numero_de_tutor, foto_perfil=None):
+def update_paciente(paciente_id, nombre, fecha_nacimiento, historial_clinico, tutor, numero_de_tutor, foto_perfil=None, genero='No especificado'):
     """Actualiza los datos de un paciente."""
     conexion = conectar_db()
     if not conexion: return False
@@ -396,11 +396,11 @@ def update_paciente(paciente_id, nombre, fecha_nacimiento, historial_clinico, tu
     
     query = """
         UPDATE pacientes 
-        SET nombre = %s, fecha_nacimiento = %s, historial_clinico = %s, tutor = %s, numero_de_tutor = %s, foto_perfil = %s
+        SET nombre = %s, fecha_nacimiento = %s, historial_clinico = %s, tutor = %s, numero_de_tutor = %s, foto_perfil = %s, genero = %s
         WHERE id = %s
     """
     try:
-        cursor.execute(query, (nombre, fecha_nacimiento, historial_clinico, tutor, num_tutor, foto_perfil, paciente_id))
+        cursor.execute(query, (nombre, fecha_nacimiento, historial_clinico, tutor, num_tutor, foto_perfil, genero, paciente_id))
         conexion.commit()
         return True
     except Error as e:

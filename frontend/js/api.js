@@ -89,21 +89,22 @@ const API = {
   /**
    * Add a new patient
    */
-  async addPaciente(nombre, fechaNacimiento, historialClinico, idEvaluador, tutor, numeroDeTutor, fotoPerfil = null) {
+  async addPaciente(nombre, fechaNacimiento, historialClinico, idEvaluador, tutor, numeroDeTutor, fotoFile = null, genero = 'No especificado') {
+    const formData = new FormData();
+    formData.append('nombre', nombre);
+    formData.append('fecha_nacimiento', fechaNacimiento);
+    formData.append('historial_clinico', historialClinico);
+    formData.append('id_evaluador', idEvaluador);
+    formData.append('tutor', tutor);
+    formData.append('numero_de_tutor', numeroDeTutor);
+    formData.append('genero', genero);
+    if (fotoFile) {
+      formData.append('foto_perfil', fotoFile);
+    }
+
     const response = await fetch(`${API_BASE}/api/pacientes`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ 
-        nombre, 
-        fecha_nacimiento: fechaNacimiento, 
-        historial_clinico: historialClinico, 
-        id_evaluador: idEvaluador,
-        tutor: tutor,
-        numero_de_tutor: numeroDeTutor,
-        foto_perfil: fotoPerfil
-      })
+      body: formData
     });
     const data = await response.json();
     if (!response.ok) {
@@ -115,20 +116,21 @@ const API = {
   /**
    * Update an existing patient
    */
-  async updatePaciente(id, nombre, fechaNacimiento, historialClinico, tutor, numeroDeTutor, fotoPerfil = null) {
+  async updatePaciente(id, nombre, fechaNacimiento, historialClinico, tutor, numeroDeTutor, fotoFile = null, genero = 'No especificado') {
+    const formData = new FormData();
+    formData.append('nombre', nombre);
+    formData.append('fecha_nacimiento', fechaNacimiento);
+    formData.append('historial_clinico', historialClinico);
+    formData.append('tutor', tutor);
+    formData.append('numero_de_tutor', numeroDeTutor);
+    formData.append('genero', genero);
+    if (fotoFile) {
+      formData.append('foto_perfil', fotoFile);
+    }
+
     const response = await fetch(`${API_BASE}/api/pacientes/${id}`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ 
-        nombre, 
-        fecha_nacimiento: fechaNacimiento, 
-        historial_clinico: historialClinico,
-        tutor: tutor,
-        numero_de_tutor: numeroDeTutor,
-        foto_perfil: fotoPerfil
-      })
+      body: formData
     });
     const data = await response.json();
     if (!response.ok) {

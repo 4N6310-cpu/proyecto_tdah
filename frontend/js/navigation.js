@@ -7,6 +7,7 @@ let currentView = null;
 let currentPatient = null;
 let patientsData = [];
 let selectedPhotoBase64 = null;
+let selectedPhotoFile = null;
 
 // Initialize SPA on load
 document.addEventListener('DOMContentLoaded', () => {
@@ -48,7 +49,7 @@ async function navigateTo(viewName) {
       container.innerHTML = html;
 
       const evalData = Auth.getEvaluador();
-      document.getElementById('user-display').innerText = `${evalData.nombre} (${evalData.especialidad})`;
+      document.getElementById('user-display').innerText = `${evalData.nombre} (${evalData.especialidad || evalData.rol || 'Especialista'})`;
 
       bindDashboardEvents();
       loadPatients();
@@ -158,6 +159,7 @@ function bindDashboardEvents() {
       console.log("File input changed. Files selected:", e.target.files ? e.target.files.length : 0);
       if (e.target.files && e.target.files.length > 0) {
         const file = e.target.files[0];
+        selectedPhotoFile = file; // Store raw file object
         console.log("Processing file:", file.name, "size:", file.size, "type:", file.type);
         const reader = new FileReader();
         reader.onload = function(event) {
@@ -307,12 +309,14 @@ function openAddPatientModal() {
   document.getElementById('modal-patient-id').value = '';
   document.getElementById('modal-patient-name').value = '';
   document.getElementById('modal-patient-birthdate').value = '';
+  document.getElementById('modal-patient-gender').value = 'No especificado';
   document.getElementById('modal-patient-tutor').value = '';
   document.getElementById('modal-patient-tutor-phone').value = '';
   document.getElementById('modal-patient-history').value = '';
   
   // Reset photo upload elements
   selectedPhotoBase64 = null;
+  selectedPhotoFile = null;
   document.getElementById('modal-patient-photo').value = '';
   document.getElementById('modal-photo-preview').src = '';
   document.getElementById('modal-photo-preview').style.display = 'none';
@@ -331,12 +335,14 @@ function openEditPatientModal(event, patientId) {
   document.getElementById('modal-patient-id').value = patient.id;
   document.getElementById('modal-patient-name').value = patient.nombre;
   document.getElementById('modal-patient-birthdate').value = patient.fecha_nacimiento || '';
+  document.getElementById('modal-patient-gender').value = patient.genero || 'No especificado';
   document.getElementById('modal-patient-tutor').value = patient.tutor_nombre || '';
   document.getElementById('modal-patient-tutor-phone').value = (patient.tutor_celular && patient.tutor_celular !== "No tiene") ? patient.tutor_celular : '';
   document.getElementById('modal-patient-history').value = patient.notas || '';
   
   // Load profile photo if it exists
   document.getElementById('modal-patient-photo').value = '';
+  selectedPhotoFile = null;
   if (patient.foto_perfil) {
     selectedPhotoBase64 = patient.foto_perfil;
     document.getElementById('modal-photo-preview').src = patient.foto_perfil;
@@ -362,6 +368,7 @@ async function savePatient(event) {
   const id = document.getElementById('modal-patient-id').value;
   const nombre = document.getElementById('modal-patient-name').value.trim();
   const fechaNacimiento = document.getElementById('modal-patient-birthdate').value;
+  const genero = document.getElementById('modal-patient-gender').value;
   const tutor = document.getElementById('modal-patient-tutor').value.trim();
   const numeroDeTutor = document.getElementById('modal-patient-tutor-phone').value.trim();
   const historialClinico = document.getElementById('modal-patient-history').value.trim();
@@ -374,9 +381,9 @@ async function savePatient(event) {
   
   try {
     if (id) {
-      await API.updatePaciente(id, nombre, fechaNacimiento, historialClinico, tutor, numeroDeTutor, selectedPhotoBase64);
+      await API.updatePaciente(id, nombre, fechaNacimiento, historialClinico, tutor, numeroDeTutor, selectedPhotoFile, genero);
     } else {
-      await API.addPaciente(nombre, fechaNacimiento, historialClinico, evalData.id, tutor, numeroDeTutor, selectedPhotoBase64);
+      await API.addPaciente(nombre, fechaNacimiento, historialClinico, evalData.id, tutor, numeroDeTutor, selectedPhotoFile, genero);
     }
     
     closePatientModal();

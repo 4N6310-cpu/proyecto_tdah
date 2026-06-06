@@ -28,6 +28,11 @@ from reportes.pdf_generator import PDFReportGenerator
 app = Flask(__name__, static_folder='frontend', static_url_path='')
 CORS(app) # Enable Cross-Origin Resource Sharing for easy API access
 
+# Configure uploads directory inside frontend static folder
+UPLOAD_FOLDER = os.path.join(app.root_path, 'frontend', 'uploads')
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
 @app.route('/')
 def index():
     """Serves the main entry HTML of the Single Page Application."""
@@ -52,7 +57,8 @@ def api_login():
                 "id": terapeuta.id,
                 "nombre": terapeuta.nombre,
                 "usuario": terapeuta.username,
-                "rol": terapeuta.especialidad
+                "rol": terapeuta.especialidad,
+                "especialidad": terapeuta.especialidad
             }
         })
     else:
@@ -74,7 +80,11 @@ def api_pacientes():
 @app.route('/api/pacientes', methods=['POST'])
 def api_add_paciente():
     """Registra un nuevo paciente."""
-    data = request.json
+    if request.content_type and 'multipart/form-data' in request.content_type:
+        data = request.form
+    else:
+        data = request.json or {}
+        
     if not data or 'nombre' not in data or 'fecha_nacimiento' not in data or 'id_evaluador' not in data:
         return jsonify({"status": "error", "message": "Faltan parámetros requeridos (nombre, fecha_nacimiento, id_evaluador)."}), 400
         
@@ -84,10 +94,22 @@ def api_add_paciente():
     id_evaluador = int(data['id_evaluador'])
     tutor = data.get('tutor', 'No asignado')
     numero_de_tutor = data.get('numero_de_tutor', 0)
-    foto_perfil = data.get('foto_perfil', None)
+    genero = data.get('genero', 'No especificado')
     
+    # Check for file upload
+    foto_perfil = None
+    if 'foto_perfil' in request.files:
+        file = request.files['foto_perfil']
+        if file and file.filename != '':
+            from werkzeug.utils import secure_filename
+            import time
+            filename = secure_filename(f"new_{int(time.time())}_{file.filename}")
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(filepath)
+            foto_perfil = f"uploads/{filename}"
+            
     try:
-        success = add_paciente(nombre, fecha_nacimiento, historial_clinico, id_evaluador, tutor, numero_de_tutor, foto_perfil)
+        success = add_paciente(nombre, fecha_nacimiento, historial_clinico, id_evaluador, tutor, numero_de_tutor, foto_perfil, genero)
         if success:
             return jsonify({"status": "success", "message": "Paciente registrado correctamente."}), 201
         else:
@@ -98,7 +120,11 @@ def api_add_paciente():
 @app.route('/api/pacientes/<int:id>', methods=['PUT'])
 def api_update_paciente(id):
     """Actualiza un paciente existente."""
-    data = request.json
+    if request.content_type and 'multipart/form-data' in request.content_type:
+        data = request.form
+    else:
+        data = request.json or {}
+        
     if not data or 'nombre' not in data or 'fecha_nacimiento' not in data:
         return jsonify({"status": "error", "message": "Faltan parámetros requeridos (nombre, fecha_nacimiento)."}), 400
         
@@ -107,10 +133,27 @@ def api_update_paciente(id):
     historial_clinico = data.get('historial_clinico', '')
     tutor = data.get('tutor', 'No asignado')
     numero_de_tutor = data.get('numero_de_tutor', 0)
-    foto_perfil = data.get('foto_perfil', None)
+    genero = data.get('genero', 'No especificado')
     
+    # Check for file upload
+    foto_perfil = None
+    if 'foto_perfil' in request.files:
+        file = request.files['foto_perfil']
+        if file and file.filename != '':
+            from werkzeug.utils import secure_filename
+            filename = secure_filename(f"paciente_{id}_{file.filename}")
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(filepath)
+            foto_perfil = f"uploads/{filename}"
+            
+    # If no new photo uploaded, keep current photo path
+    if not foto_perfil:
+        current_pac = get_paciente_by_id(id)
+        if current_pac:
+            foto_perfil = current_pac.get('foto_perfil')
+            
     try:
-        success = update_paciente(id, nombre, fecha_nacimiento, historial_clinico, tutor, numero_de_tutor, foto_perfil)
+        success = update_paciente(id, nombre, fecha_nacimiento, historial_clinico, tutor, numero_de_tutor, foto_perfil, genero)
         if success:
             return jsonify({"status": "success", "message": "Paciente actualizado correctamente."}), 200
         else:
