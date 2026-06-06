@@ -15,23 +15,25 @@ class VideoAnalysisUploader:
         
         - callback_progreso: función que acepta un float (0.0 a 1.0) para actualizar la barra de progreso en el Frontend.
         """
-        cap = cv2.VideoCapture(path_video)
-        if not cap.isOpened():
-            raise ValueError(f"No se pudo abrir el archivo de video: {path_video}")
-            
-        fps = cap.get(cv2.CAP_PROP_FPS)
-        if fps <= 0:
-            fps = 30.0 # Valor por defecto
-            
-        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-        
-        # Inicializar detector y motor de comportamiento
-        detector = VideoDetector(use_face_mesh=True, use_pose=True)
-        engine = BehavioralEngine(fps=fps)
-        
-        frame_actual = 0
-        
+        cap = None
+        detector = None
         try:
+            cap = cv2.VideoCapture(path_video)
+            if not cap.isOpened():
+                raise ValueError(f"No se pudo abrir el archivo de video: {path_video}")
+                
+            fps = cap.get(cv2.CAP_PROP_FPS)
+            if fps <= 0:
+                fps = 30.0 # Valor por defecto
+                
+            total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            
+            # Inicializar detector y motor de comportamiento
+            detector = VideoDetector(use_face_mesh=True, use_pose=True)
+            engine = BehavioralEngine(fps=fps)
+            
+            frame_actual = 0
+            
             while cap.isOpened():
                 ret, frame = cap.read()
                 if not ret:
@@ -49,8 +51,10 @@ class VideoAnalysisUploader:
                     callback_progreso(progreso)
                     
         finally:
-            cap.release()
-            detector.liberar()
+            if cap is not None:
+                cap.release()
+            if detector is not None:
+                detector.liberar()
             
         # Obtener resultados finales
         resultados = engine.obtener_resultados_sesion()

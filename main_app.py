@@ -126,11 +126,15 @@ def api_analisis_video():
     if video_file.filename == '':
         return jsonify({"status": "error", "message": "El archivo de video provisto está vacío."}), 400
         
+    temp_video_path = None
     try:
         # Save video temporarily on disk for CV2 loading
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as temp_video:
-            video_file.save(temp_video.name)
+        temp_video = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
+        try:
+            video_file.save(temp_video)
             temp_video_path = temp_video.name
+        finally:
+            temp_video.close()
             
         try:
             # Process using MediaPipe and BehavioralEngine
@@ -142,9 +146,18 @@ def api_analisis_video():
             return jsonify({"status": "success", "result": res})
         finally:
             # Safeguard cleanup
-            if os.path.exists(temp_video_path):
-                os.remove(temp_video_path)
+            if temp_video_path and os.path.exists(temp_video_path):
+                try:
+                    os.remove(temp_video_path)
+                except Exception as cleanup_err:
+                    app.logger.error(f"Error al eliminar archivo temporal {temp_video_path}: {cleanup_err}")
     except Exception as e:
+        # Fallback cleanup in case of failure before or during processing
+        if temp_video_path and os.path.exists(temp_video_path):
+            try:
+                os.remove(temp_video_path)
+            except Exception:
+                pass
         return jsonify({"status": "error", "message": f"Error en procesamiento de video: {str(e)}"}), 500
 
 @app.route('/api/reportes/pdf/<int:session_id>', methods=['GET'])
