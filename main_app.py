@@ -84,9 +84,10 @@ def api_add_paciente():
     id_evaluador = int(data['id_evaluador'])
     tutor = data.get('tutor', 'No asignado')
     numero_de_tutor = data.get('numero_de_tutor', 0)
+    foto_perfil = data.get('foto_perfil', None)
     
     try:
-        success = add_paciente(nombre, fecha_nacimiento, historial_clinico, id_evaluador, tutor, numero_de_tutor)
+        success = add_paciente(nombre, fecha_nacimiento, historial_clinico, id_evaluador, tutor, numero_de_tutor, foto_perfil)
         if success:
             return jsonify({"status": "success", "message": "Paciente registrado correctamente."}), 201
         else:
@@ -106,9 +107,10 @@ def api_update_paciente(id):
     historial_clinico = data.get('historial_clinico', '')
     tutor = data.get('tutor', 'No asignado')
     numero_de_tutor = data.get('numero_de_tutor', 0)
+    foto_perfil = data.get('foto_perfil', None)
     
     try:
-        success = update_paciente(id, nombre, fecha_nacimiento, historial_clinico, tutor, numero_de_tutor)
+        success = update_paciente(id, nombre, fecha_nacimiento, historial_clinico, tutor, numero_de_tutor, foto_perfil)
         if success:
             return jsonify({"status": "success", "message": "Paciente actualizado correctamente."}), 200
         else:

@@ -49,7 +49,7 @@ def get_pacientes_by_evaluador(id_evaluador):
     if not conexion: return []
     
     cursor = conexion.cursor(dictionary=True)
-    query = "SELECT id, nombre, fecha_nacimiento, genero, id_evaluador, tutor, numero_de_tutor, historial_clinico FROM pacientes WHERE id_evaluador = %s"
+    query = "SELECT id, nombre, fecha_nacimiento, genero, id_evaluador, tutor, numero_de_tutor, historial_clinico, foto_perfil FROM pacientes WHERE id_evaluador = %s"
     
     try:
         cursor.execute(query, (id_evaluador,))
@@ -192,7 +192,7 @@ def get_paciente_by_id(paciente_id):
     if not conexion: return None
     
     cursor = conexion.cursor(dictionary=True)
-    query = "SELECT id, nombre, fecha_nacimiento, genero, id_evaluador, tutor, numero_de_tutor, historial_clinico FROM pacientes WHERE id = %s"
+    query = "SELECT id, nombre, fecha_nacimiento, genero, id_evaluador, tutor, numero_de_tutor, historial_clinico, foto_perfil FROM pacientes WHERE id = %s"
     
     try:
         cursor.execute(query, (paciente_id,))
@@ -345,7 +345,7 @@ def get_sesion_by_id(session_id):
         cursor.close()
         conexion.close()
 
-def add_paciente(nombre, fecha_nacimiento, historial_clinico, id_evaluador, tutor, numero_de_tutor):
+def add_paciente(nombre, fecha_nacimiento, historial_clinico, id_evaluador, tutor, numero_de_tutor, foto_perfil=None):
     """Inserta un nuevo paciente en la base de datos."""
     conexion = conectar_db()
     if not conexion: return False
@@ -368,11 +368,11 @@ def add_paciente(nombre, fecha_nacimiento, historial_clinico, id_evaluador, tuto
         num_tutor = 0
     
     query = """
-        INSERT INTO pacientes (id, nombre, fecha_nacimiento, genero, id_evaluador, tutor, numero_de_tutor, historial_clinico)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        INSERT INTO pacientes (id, nombre, fecha_nacimiento, genero, id_evaluador, tutor, numero_de_tutor, historial_clinico, foto_perfil)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
     """
     try:
-        cursor.execute(query, (nuevo_id, nombre, fecha_nacimiento, 'No especificado', id_evaluador, tutor, num_tutor, historial_clinico))
+        cursor.execute(query, (nuevo_id, nombre, fecha_nacimiento, 'No especificado', id_evaluador, tutor, num_tutor, historial_clinico, foto_perfil))
         conexion.commit()
         return True
     except Error as e:
@@ -382,7 +382,7 @@ def add_paciente(nombre, fecha_nacimiento, historial_clinico, id_evaluador, tuto
         cursor.close()
         conexion.close()
 
-def update_paciente(paciente_id, nombre, fecha_nacimiento, historial_clinico, tutor, numero_de_tutor):
+def update_paciente(paciente_id, nombre, fecha_nacimiento, historial_clinico, tutor, numero_de_tutor, foto_perfil=None):
     """Actualiza los datos de un paciente."""
     conexion = conectar_db()
     if not conexion: return False
@@ -396,11 +396,11 @@ def update_paciente(paciente_id, nombre, fecha_nacimiento, historial_clinico, tu
     
     query = """
         UPDATE pacientes 
-        SET nombre = %s, fecha_nacimiento = %s, historial_clinico = %s, tutor = %s, numero_de_tutor = %s
+        SET nombre = %s, fecha_nacimiento = %s, historial_clinico = %s, tutor = %s, numero_de_tutor = %s, foto_perfil = %s
         WHERE id = %s
     """
     try:
-        cursor.execute(query, (nombre, fecha_nacimiento, historial_clinico, tutor, num_tutor, paciente_id))
+        cursor.execute(query, (nombre, fecha_nacimiento, historial_clinico, tutor, num_tutor, foto_perfil, paciente_id))
         conexion.commit()
         return True
     except Error as e:

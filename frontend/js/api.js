@@ -89,7 +89,7 @@ const API = {
   /**
    * Add a new patient
    */
-  async addPaciente(nombre, fechaNacimiento, historialClinico, idEvaluador, tutor, numeroDeTutor) {
+  async addPaciente(nombre, fechaNacimiento, historialClinico, idEvaluador, tutor, numeroDeTutor, fotoPerfil = null) {
     const response = await fetch(`${API_BASE}/api/pacientes`, {
       method: 'POST',
       headers: {
@@ -101,7 +101,8 @@ const API = {
         historial_clinico: historialClinico, 
         id_evaluador: idEvaluador,
         tutor: tutor,
-        numero_de_tutor: numeroDeTutor
+        numero_de_tutor: numeroDeTutor,
+        foto_perfil: fotoPerfil
       })
     });
     const data = await response.json();
@@ -114,7 +115,7 @@ const API = {
   /**
    * Update an existing patient
    */
-  async updatePaciente(id, nombre, fechaNacimiento, historialClinico, tutor, numeroDeTutor) {
+  async updatePaciente(id, nombre, fechaNacimiento, historialClinico, tutor, numeroDeTutor, fotoPerfil = null) {
     const response = await fetch(`${API_BASE}/api/pacientes/${id}`, {
       method: 'PUT',
       headers: {
@@ -125,7 +126,8 @@ const API = {
         fecha_nacimiento: fechaNacimiento, 
         historial_clinico: historialClinico,
         tutor: tutor,
-        numero_de_tutor: numeroDeTutor
+        numero_de_tutor: numeroDeTutor,
+        foto_perfil: fotoPerfil
       })
     });
     const data = await response.json();

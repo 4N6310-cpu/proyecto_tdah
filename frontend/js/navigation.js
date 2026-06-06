@@ -6,6 +6,7 @@
 let currentView = null;
 let currentPatient = null;
 let patientsData = [];
+let selectedPhotoBase64 = null;
 
 // Initialize SPA on load
 document.addEventListener('DOMContentLoaded', () => {
@@ -37,12 +38,12 @@ async function navigateTo(viewName) {
 
   try {
     if (viewName === 'login') {
-      const response = await fetch('login.html');
+      const response = await fetch('login.html?t=' + Date.now());
       const html = await response.text();
       container.innerHTML = html;
       bindLoginEvents();
     } else if (viewName === 'dashboard') {
-      const response = await fetch('dashboard.html');
+      const response = await fetch('dashboard.html?t=' + Date.now());
       const html = await response.text();
       container.innerHTML = html;
 
@@ -149,6 +150,92 @@ function bindDashboardEvents() {
 
   // Behavior simulation action
   document.getElementById('run-simulation-btn').addEventListener('click', executeSimulation);
+
+  // Patient photo file input change listener
+  const photoInput = document.getElementById('modal-patient-photo');
+  if (photoInput) {
+    photoInput.addEventListener('change', (e) => {
+      console.log("File input changed. Files selected:", e.target.files ? e.target.files.length : 0);
+      if (e.target.files && e.target.files.length > 0) {
+        const file = e.target.files[0];
+        console.log("Processing file:", file.name, "size:", file.size, "type:", file.type);
+        const reader = new FileReader();
+        reader.onload = function(event) {
+          const rawBase64 = event.target.result;
+          console.log("FileReader completed. Raw Base64 string length:", rawBase64.length);
+          
+          // Helper to update UI preview
+          const updatePreview = (base64Data) => {
+            const previewEl = document.getElementById('modal-photo-preview');
+            const placeholderEl = document.getElementById('modal-photo-placeholder');
+            if (previewEl && placeholderEl) {
+              previewEl.src = base64Data;
+              previewEl.style.display = 'block';
+              placeholderEl.style.display = 'none';
+              console.log("Preview image updated successfully.");
+            } else {
+              console.error("Preview elements not found in DOM.");
+            }
+          };
+
+          // Try canvas resizing
+          try {
+            const img = new Image();
+            img.onload = function() {
+              try {
+                console.log("Image loaded in memory. Original size:", img.width, "x", img.height);
+                const maxDim = 300;
+                let width = img.width;
+                let height = img.height;
+                
+                if (width > maxDim || height > maxDim) {
+                  if (width > height) {
+                    height = Math.round((height * maxDim) / width);
+                    width = maxDim;
+                  } else {
+                    width = Math.round((width * maxDim) / height);
+                    height = maxDim;
+                  }
+                }
+                
+                console.log("Calculated dimensions for resize:", width, "x", height);
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                const resizedBase64 = canvas.toDataURL('image/jpeg', 0.85);
+                console.log("Canvas resize complete. New Base64 length:", resizedBase64.length);
+                selectedPhotoBase64 = resizedBase64;
+                updatePreview(resizedBase64);
+              } catch (canvasErr) {
+                console.error("Canvas resizing logic crashed. Falling back to raw image:", canvasErr);
+                selectedPhotoBase64 = rawBase64;
+                updatePreview(rawBase64);
+              }
+            };
+            img.onerror = function(loadErr) {
+              console.error("Failed to load image element. Falling back to raw Base64:", loadErr);
+              selectedPhotoBase64 = rawBase64;
+              updatePreview(rawBase64);
+            };
+            img.src = rawBase64;
+          } catch (imgErr) {
+            console.error("Image loading initialization failed. Using raw Base64:", imgErr);
+            selectedPhotoBase64 = rawBase64;
+            updatePreview(rawBase64);
+          }
+        };
+        reader.onerror = function(readErr) {
+          console.error("FileReader failed to read the file:", readErr);
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+  } else {
+    console.error("modal-patient-photo element was not found in DOM.");
+  }
 }
 
 /**
@@ -185,26 +272,31 @@ function renderPatients(list) {
     return;
   }
 
-  grid.innerHTML = list.map(pac => `
-    <div class="patient-card" onclick="openPatientDossier(${pac.id})">
-      <div class="patient-avatar">👦</div>
-      <div class="patient-info">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-          <h3 class="patient-name" style="margin: 0;">${escapeHTML(pac.nombre)}</h3>
-          <div class="patient-card-actions" style="margin-top: 0;">
-            <button class="btn-icon" title="Editar Paciente" onclick="openEditPatientModal(event, ${pac.id})">✏️</button>
-            <button class="btn-icon btn-icon-danger" title="Eliminar Paciente" onclick="deletePatientAction(event, ${pac.id})">🗑️</button>
+  grid.innerHTML = list.map(pac => {
+    const avatarHtml = pac.foto_perfil 
+      ? `<img src="${pac.foto_perfil}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`
+      : `👦`;
+    return `
+      <div class="patient-card" onclick="openPatientDossier(${pac.id})">
+        <div class="patient-avatar">${avatarHtml}</div>
+        <div class="patient-info">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <h3 class="patient-name" style="margin: 0;">${escapeHTML(pac.nombre)}</h3>
+            <div class="patient-card-actions" style="margin-top: 0;">
+              <button class="btn-icon" title="Editar Paciente" onclick="openEditPatientModal(event, ${pac.id})">✏️</button>
+              <button class="btn-icon btn-icon-danger" title="Eliminar Paciente" onclick="deletePatientAction(event, ${pac.id})">🗑️</button>
+            </div>
           </div>
+          <p class="patient-details" style="margin-top: 8px;">
+            Edad: ${pac.edad} años | Género: ${escapeHTML(pac.genero)}<br>
+            Nombre Tutor: ${escapeHTML(pac.nombre_tutor || 'No registrado')}<br>
+            Contacto: ${escapeHTML(pac.contacto || 'No registrado')}
+          </p>
+          <span class="patient-stats">Ver expediente clínico ➡️</span>
         </div>
-        <p class="patient-details" style="margin-top: 8px;">
-          Edad: ${pac.edad} años | Género: ${escapeHTML(pac.genero)}<br>
-          Nombre Tutor: ${escapeHTML(pac.nombre_tutor || 'No registrado')}<br>
-          Contacto: ${escapeHTML(pac.contacto || 'No registrado')}
-        </p>
-        <span class="patient-stats">Ver expediente clínico ➡️</span>
       </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 }
 
 /* =====================================================================
@@ -218,6 +310,14 @@ function openAddPatientModal() {
   document.getElementById('modal-patient-tutor').value = '';
   document.getElementById('modal-patient-tutor-phone').value = '';
   document.getElementById('modal-patient-history').value = '';
+  
+  // Reset photo upload elements
+  selectedPhotoBase64 = null;
+  document.getElementById('modal-patient-photo').value = '';
+  document.getElementById('modal-photo-preview').src = '';
+  document.getElementById('modal-photo-preview').style.display = 'none';
+  document.getElementById('modal-photo-placeholder').style.display = 'block';
+  
   document.getElementById('patient-modal').classList.remove('hidden');
 }
 
@@ -234,6 +334,20 @@ function openEditPatientModal(event, patientId) {
   document.getElementById('modal-patient-tutor').value = patient.tutor_nombre || '';
   document.getElementById('modal-patient-tutor-phone').value = (patient.tutor_celular && patient.tutor_celular !== "No tiene") ? patient.tutor_celular : '';
   document.getElementById('modal-patient-history').value = patient.notas || '';
+  
+  // Load profile photo if it exists
+  document.getElementById('modal-patient-photo').value = '';
+  if (patient.foto_perfil) {
+    selectedPhotoBase64 = patient.foto_perfil;
+    document.getElementById('modal-photo-preview').src = patient.foto_perfil;
+    document.getElementById('modal-photo-preview').style.display = 'block';
+    document.getElementById('modal-photo-placeholder').style.display = 'none';
+  } else {
+    selectedPhotoBase64 = null;
+    document.getElementById('modal-photo-preview').src = '';
+    document.getElementById('modal-photo-preview').style.display = 'none';
+    document.getElementById('modal-photo-placeholder').style.display = 'block';
+  }
   
   document.getElementById('patient-modal').classList.remove('hidden');
 }
@@ -260,9 +374,9 @@ async function savePatient(event) {
   
   try {
     if (id) {
-      await API.updatePaciente(id, nombre, fechaNacimiento, historialClinico, tutor, numeroDeTutor);
+      await API.updatePaciente(id, nombre, fechaNacimiento, historialClinico, tutor, numeroDeTutor, selectedPhotoBase64);
     } else {
-      await API.addPaciente(nombre, fechaNacimiento, historialClinico, evalData.id, tutor, numeroDeTutor);
+      await API.addPaciente(nombre, fechaNacimiento, historialClinico, evalData.id, tutor, numeroDeTutor, selectedPhotoBase64);
     }
     
     closePatientModal();
@@ -330,11 +444,21 @@ async function openPatientDossier(patientId) {
 function renderDossier(paciente) {
   // 1. Render Banner
   const banner = document.getElementById('patient-banner');
+  const bannerAvatarHtml = paciente.foto_perfil
+    ? `<img src="${paciente.foto_perfil}" style="width: 100%; height: 100%; object-fit: cover;">`
+    : `<span style="font-size: 45px;">👦</span>`;
+    
   banner.innerHTML = `
-    <span style="font-size: 13px; text-transform: uppercase; font-weight: 600; opacity: 0.8;">Ficha de Expediente Clínico</span>
-    <h1 class="patient-header-title" style="color: white !important;">${escapeHTML(paciente.nombre)}</h1>
-    <p class="patient-header-desc">
-      Edad: ${paciente.edad} años | Género: ${escapeHTML(paciente.genero)} | Tutor: ${escapeHTML(paciente.tutor)} | Teléfono: ${escapeHTML(paciente.celular)}    </p>
+    <div class="patient-banner-avatar" style="width: 80px; height: 80px; border-radius: 50%; overflow: hidden; border: 3px solid rgba(255,255,255,0.4); display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.1); flex-shrink: 0;">
+      ${bannerAvatarHtml}
+    </div>
+    <div>
+      <span style="font-size: 13px; text-transform: uppercase; font-weight: 600; opacity: 0.8; display: block; margin-bottom: 4px;">Ficha de Expediente Clínico</span>
+      <h1 class="patient-header-title" style="color: white !important; margin: 0 0 4px 0; line-height: 1.2;">${escapeHTML(paciente.nombre)}</h1>
+      <p class="patient-header-desc" style="margin: 0;">
+        Edad: ${paciente.edad} años | Género: ${escapeHTML(paciente.genero)} | Tutor: ${escapeHTML(paciente.tutor)} | Teléfono: ${escapeHTML(paciente.celular)}
+      </p>
+    </div>
   `;
 
   // 2. Clear upload elements

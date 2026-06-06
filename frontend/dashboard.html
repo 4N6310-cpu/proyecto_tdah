@@ -212,6 +212,16 @@
       <form id="patient-form" onsubmit="savePatient(event)">
         <input type="hidden" id="modal-patient-id">
 
+        <!-- Selección de Foto de Perfil -->
+        <div class="form-group text-center" style="display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: 20px;">
+          <div class="profile-pic-container" onclick="document.getElementById('modal-patient-photo').click()" style="position: relative; width: 90px; height: 90px; border-radius: 50%; border: 3px solid var(--border-color); overflow: hidden; background: var(--background-light); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: var(--transition-smooth);">
+            <img id="modal-photo-preview" src="" alt="Vista previa" style="width: 100%; height: 100%; object-fit: cover; display: none;">
+            <span id="modal-photo-placeholder" style="font-size: 45px;">👦</span>
+          </div>
+          <button type="button" class="btn btn-secondary" style="width: auto; padding: 4px 12px; font-size: 12px;" onclick="document.getElementById('modal-patient-photo').click()">Seleccionar Foto</button>
+          <input type="file" id="modal-patient-photo" accept="image/*" style="display: none;">
+        </div>
+
         <div class="form-group">
           <label for="modal-patient-name">Nombre Completo</label>
           <input type="text" id="modal-patient-name" class="form-control" required placeholder="">

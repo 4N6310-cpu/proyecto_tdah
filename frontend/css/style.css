@@ -386,6 +386,9 @@ body {
   padding: 30px;
   margin-bottom: 30px;
   box-shadow: var(--shadow-md);
+  display: flex;
+  align-items: center;
+  gap: 20px;
 }
 
 .patient-header-title {
@@ -699,12 +702,14 @@ textarea.form-control {
   height: 100%;
   z-index: 1000;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   background: rgba(15, 23, 42, 0.45);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   transition: opacity 0.3s ease;
+  overflow-y: auto;
+  padding: 40px 10px;
 }
 
 .modal.hidden {
@@ -712,6 +717,7 @@ textarea.form-control {
 }
 
 .modal-content {
+  margin: auto;
   background: #ffffff;
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
@@ -783,4 +789,186 @@ textarea.form-control {
   background: #fef2f2;
   border-color: var(--danger);
   color: var(--danger);
+}
+
+/* =====================================================================
+   RESPONSIVE DESIGN & MOBILE OPTIMIZATIONS
+   ===================================================================== */
+
+@media (max-width: 992px) {
+  /* Let's make sure the dossier layout behaves in single column */
+  .dossier-layout {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-navbar {
+    padding: 10px 20px;
+  }
+  .dashboard-container {
+    padding: 20px 15px;
+  }
+}
+
+@media (max-width: 600px) {
+  /* Navbar stack layout on mobile */
+  .dashboard-navbar {
+    flex-direction: column;
+    gap: 12px;
+    text-align: center;
+    padding: 15px;
+  }
+  
+  .navbar-profile {
+    width: 100%;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  .user-badge {
+    white-space: nowrap;
+    font-size: 11px;
+  }
+
+  /* Header and Action row */
+  .header-actions-row {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+    text-align: center;
+  }
+  
+  .header-actions-row .btn {
+    width: 100%;
+  }
+
+  /* Patient Grid */
+  .patient-grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 15px;
+  }
+
+  /* Patient Card adjustments */
+  .patient-card {
+    padding: 16px;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  
+  .patient-avatar {
+    width: 70px;
+    height: 70px;
+    font-size: 40px;
+  }
+  
+  .patient-info {
+    width: 100%;
+  }
+
+  .patient-info div {
+    flex-direction: column;
+    align-items: center !important;
+    gap: 10px;
+  }
+
+  .patient-card-actions {
+    margin-top: 5px;
+    justify-content: center;
+  }
+
+  /* Patient detail view / Dossier */
+  .patient-header-banner {
+    flex-direction: column;
+    text-align: center;
+    padding: 20px;
+    gap: 15px;
+  }
+
+  /* Session Accordions responsive */
+  .session-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 16px;
+  }
+  
+  .session-header-metrics {
+    width: 100%;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .session-content {
+    padding: 15px;
+  }
+  
+  .session-detail-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  /* Tabs navigation */
+  .tabs-header {
+    flex-direction: column;
+    border-bottom: none;
+    gap: 8px;
+  }
+
+  .tab-btn {
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 10px;
+    margin-bottom: 0;
+  }
+  
+  .tab-btn.active {
+    background: var(--secondary-color);
+    color: white !important;
+    border-color: var(--secondary-color);
+  }
+
+  /* Modals */
+  .modal {
+    padding: 20px 10px;
+  }
+
+  .modal-content {
+    padding: 24px 16px;
+    width: 95%;
+  }
+
+  .modal-content h2, #modal-title {
+    font-size: 20px !important;
+    padding-right: 30px;
+  }
+
+  .modal-close {
+    top: 15px;
+    right: 15px;
+  }
+}
+
+@media (max-width: 400px) {
+  /* Smaller screens */
+  .session-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .navbar-profile {
+    flex-direction: column;
+  }
+
+  .user-badge, .btn-logout {
+    width: 100%;
+    text-align: center;
+  }
+
+  .modal-content h2, #modal-title {
+    font-size: 18px !important;
+    padding-right: 25px;
+  }
 }
