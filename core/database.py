@@ -49,7 +49,7 @@ def get_pacientes_by_evaluador(id_evaluador):
     if not conexion: return []
     
     cursor = conexion.cursor(dictionary=True)
-    query = "SELECT id, nombre, fecha_nacimiento, genero, id_evaluador, tutor, numero_de_tutor FROM pacientes WHERE id_evaluador = %s"
+    query = "SELECT id, nombre, fecha_nacimiento, genero, id_evaluador, tutor, numero_de_tutor, historial_clinico FROM pacientes WHERE id_evaluador = %s"
     
     try:
         cursor.execute(query, (id_evaluador,))
@@ -77,6 +77,7 @@ def get_pacientes_by_evaluador(id_evaluador):
                 
                 hoy = datetime.date.today()
                 pac["edad"] = hoy.year - fecha_nac.year - ((hoy.month, hoy.day) < (fecha_nac.month, fecha_nac.day))
+                pac["fecha_nacimiento"] = fecha_nac.strftime("%Y-%m-%d")
             else:
                 pac["edad"] = 0 
             
@@ -84,8 +85,8 @@ def get_pacientes_by_evaluador(id_evaluador):
             pac["nombre_tutor"] = f"{pac['tutor_nombre']}"
             pac["contacto"] = f"{pac['tutor_celular']}"
             
-            # 5. Notas predeterminadas
-            pac["notas"] = "Paciente en seguimiento de comportamiento." 
+            # 5. Notas reales/predeterminadas
+            pac["notas"] = pac.get("historial_clinico") if pac.get("historial_clinico") else "Paciente en seguimiento de comportamiento." 
 
         return pacientes
     except Error as e:
@@ -191,7 +192,7 @@ def get_paciente_by_id(paciente_id):
     if not conexion: return None
     
     cursor = conexion.cursor(dictionary=True)
-    query = "SELECT id, nombre, fecha_nacimiento, genero, id_evaluador,tutor,numero_de_tutor FROM pacientes WHERE id = %s"
+    query = "SELECT id, nombre, fecha_nacimiento, genero, id_evaluador, tutor, numero_de_tutor, historial_clinico FROM pacientes WHERE id = %s"
     
     try:
         cursor.execute(query, (paciente_id,))
@@ -199,15 +200,18 @@ def get_paciente_by_id(paciente_id):
         if paciente:
             fecha_nac = paciente["fecha_nacimiento"]
             if fecha_nac:
+                if isinstance(fecha_nac, str):
+                    fecha_nac = datetime.datetime.strptime(fecha_nac, "%Y-%m-%d").date()
                 hoy = datetime.date.today()
                 paciente["edad"] = hoy.year - fecha_nac.year - ((hoy.month, hoy.day) < (fecha_nac.month, fecha_nac.day))
+                paciente["fecha_nacimiento"] = fecha_nac.strftime("%Y-%m-%d")
             else:
                 paciente["edad"] = 0
             
-            paciente["tutor"] = paciente['tutor']
+            paciente["tutor"] = paciente['tutor'] if paciente['tutor'] else "No asignado"
             numero = paciente.get('numero_de_tutor')
             paciente["celular"] = str(numero) if numero is not None else "no tiene"
-            paciente["notas"] = "Paciente en seguimiento de comportamiento. Se observa inquietud motora en entornos de concentración estructurada."
+            paciente["notas"] = paciente.get("historial_clinico") if paciente.get("historial_clinico") else "Paciente en seguimiento de comportamiento. Se observa inquietud motora en entornos de concentración estructurada."
             paciente["historial_analisis"] = get_sesiones_by_paciente(paciente_id)
             
         return paciente
@@ -337,6 +341,89 @@ def get_sesion_by_id(session_id):
     except Error as e:
         print(f"Error al obtener sesión por ID: {e}")
         return None
+    finally:
+        cursor.close()
+        conexion.close()
+
+def add_paciente(nombre, fecha_nacimiento, historial_clinico, id_evaluador, tutor, numero_de_tutor):
+    """Inserta un nuevo paciente en la base de datos."""
+    conexion = conectar_db()
+    if not conexion: return False
+    cursor = conexion.cursor()
+    
+    # Obtener el siguiente ID disponible
+    try:
+        cursor.execute("SELECT COALESCE(MAX(id), 0) + 1 FROM pacientes")
+        nuevo_id = cursor.fetchone()[0]
+    except Error as e:
+        print(f"Error al calcular el nuevo ID de paciente: {e}")
+        cursor.close()
+        conexion.close()
+        return False
+    
+    # Sanitizar número de tutor
+    try:
+        num_tutor = int(numero_de_tutor)
+    except (ValueError, TypeError):
+        num_tutor = 0
+    
+    query = """
+        INSERT INTO pacientes (id, nombre, fecha_nacimiento, genero, id_evaluador, tutor, numero_de_tutor, historial_clinico)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+    """
+    try:
+        cursor.execute(query, (nuevo_id, nombre, fecha_nacimiento, 'No especificado', id_evaluador, tutor, num_tutor, historial_clinico))
+        conexion.commit()
+        return True
+    except Error as e:
+        print(f"Error al añadir paciente: {e}")
+        return False
+    finally:
+        cursor.close()
+        conexion.close()
+
+def update_paciente(paciente_id, nombre, fecha_nacimiento, historial_clinico, tutor, numero_de_tutor):
+    """Actualiza los datos de un paciente."""
+    conexion = conectar_db()
+    if not conexion: return False
+    cursor = conexion.cursor()
+    
+    # Sanitizar número de tutor
+    try:
+        num_tutor = int(numero_de_tutor)
+    except (ValueError, TypeError):
+        num_tutor = 0
+    
+    query = """
+        UPDATE pacientes 
+        SET nombre = %s, fecha_nacimiento = %s, historial_clinico = %s, tutor = %s, numero_de_tutor = %s
+        WHERE id = %s
+    """
+    try:
+        cursor.execute(query, (nombre, fecha_nacimiento, historial_clinico, tutor, num_tutor, paciente_id))
+        conexion.commit()
+        return True
+    except Error as e:
+        print(f"Error al actualizar paciente: {e}")
+        return False
+    finally:
+        cursor.close()
+        conexion.close()
+
+def delete_paciente(paciente_id):
+    """Elimina un paciente y por ON DELETE CASCADE sus sesiones asociadas."""
+    conexion = conectar_db()
+    if not conexion: return False
+    cursor = conexion.cursor()
+    
+    query = "DELETE FROM pacientes WHERE id = %s"
+    try:
+        cursor.execute(query, (paciente_id,))
+        conexion.commit()
+        return True
+    except Error as e:
+        print(f"Error al eliminar paciente: {e}")
+        return False
     finally:
         cursor.close()
         conexion.close()

@@ -176,7 +176,12 @@ async function loadPatients() {
 function renderPatients(list) {
   const grid = document.getElementById('patients-grid');
   if (list.length === 0) {
-    grid.innerHTML = `<p style="grid-column: 1/-1; color: var(--text-muted); text-align: center;">No hay pacientes asignados que coincidan.</p>`;
+    grid.innerHTML = `
+      <div style="grid-column: 1/-1; text-align: center; padding: 40px 20px; background: rgba(255,255,255,0.6); border-radius: var(--radius-lg); border: 1px dashed var(--border-color); box-shadow: var(--shadow-sm);">
+        <p style="color: var(--text-muted); margin-bottom: 20px; font-size: 15px;">No hay pacientes asignados que coincidan.</p>
+        <button class="btn" style="width: auto; margin: 0 auto;" onclick="openAddPatientModal()">✨ Agregar Nuevo Paciente</button>
+      </div>
+    `;
     return;
   }
 
@@ -184,8 +189,14 @@ function renderPatients(list) {
     <div class="patient-card" onclick="openPatientDossier(${pac.id})">
       <div class="patient-avatar">👦</div>
       <div class="patient-info">
-        <h3 class="patient-name">${escapeHTML(pac.nombre)}</h3>
-        <p class="patient-details">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+          <h3 class="patient-name" style="margin: 0;">${escapeHTML(pac.nombre)}</h3>
+          <div class="patient-card-actions" style="margin-top: 0;">
+            <button class="btn-icon" title="Editar Paciente" onclick="openEditPatientModal(event, ${pac.id})">✏️</button>
+            <button class="btn-icon btn-icon-danger" title="Eliminar Paciente" onclick="deletePatientAction(event, ${pac.id})">🗑️</button>
+          </div>
+        </div>
+        <p class="patient-details" style="margin-top: 8px;">
           Edad: ${pac.edad} años | Género: ${escapeHTML(pac.genero)}<br>
           Nombre Tutor: ${escapeHTML(pac.nombre_tutor || 'No registrado')}<br>
           Contacto: ${escapeHTML(pac.contacto || 'No registrado')}
@@ -194,6 +205,91 @@ function renderPatients(list) {
       </div>
     </div>
   `).join('');
+}
+
+/* =====================================================================
+   PATIENT CRUD MODAL ACTIONS
+   ===================================================================== */
+function openAddPatientModal() {
+  document.getElementById('modal-title').innerText = 'Agregar Nuevo Paciente';
+  document.getElementById('modal-patient-id').value = '';
+  document.getElementById('modal-patient-name').value = '';
+  document.getElementById('modal-patient-birthdate').value = '';
+  document.getElementById('modal-patient-tutor').value = '';
+  document.getElementById('modal-patient-tutor-phone').value = '';
+  document.getElementById('modal-patient-history').value = '';
+  document.getElementById('patient-modal').classList.remove('hidden');
+}
+
+function openEditPatientModal(event, patientId) {
+  if (event) event.stopPropagation(); // Evitar abrir el expediente del paciente
+  
+  const patient = patientsData.find(p => p.id === patientId);
+  if (!patient) return;
+  
+  document.getElementById('modal-title').innerText = 'Editar Datos del Paciente';
+  document.getElementById('modal-patient-id').value = patient.id;
+  document.getElementById('modal-patient-name').value = patient.nombre;
+  document.getElementById('modal-patient-birthdate').value = patient.fecha_nacimiento || '';
+  document.getElementById('modal-patient-tutor').value = patient.tutor_nombre || '';
+  document.getElementById('modal-patient-tutor-phone').value = (patient.tutor_celular && patient.tutor_celular !== "No tiene") ? patient.tutor_celular : '';
+  document.getElementById('modal-patient-history').value = patient.notas || '';
+  
+  document.getElementById('patient-modal').classList.remove('hidden');
+}
+
+function closePatientModal() {
+  document.getElementById('patient-modal').classList.add('hidden');
+}
+
+async function savePatient(event) {
+  event.preventDefault();
+  
+  const id = document.getElementById('modal-patient-id').value;
+  const nombre = document.getElementById('modal-patient-name').value.trim();
+  const fechaNacimiento = document.getElementById('modal-patient-birthdate').value;
+  const tutor = document.getElementById('modal-patient-tutor').value.trim();
+  const numeroDeTutor = document.getElementById('modal-patient-tutor-phone').value.trim();
+  const historialClinico = document.getElementById('modal-patient-history').value.trim();
+  const evalData = Auth.getEvaluador();
+  
+  const submitBtn = document.getElementById('modal-submit-btn');
+  const originalText = submitBtn.innerText;
+  submitBtn.disabled = true;
+  submitBtn.innerText = 'Guardando...';
+  
+  try {
+    if (id) {
+      await API.updatePaciente(id, nombre, fechaNacimiento, historialClinico, tutor, numeroDeTutor);
+    } else {
+      await API.addPaciente(nombre, fechaNacimiento, historialClinico, evalData.id, tutor, numeroDeTutor);
+    }
+    
+    closePatientModal();
+    await loadPatients(); // Actualizar lista inmediatamente
+  } catch (err) {
+    alert('Error al guardar paciente: ' + err.message);
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.innerText = originalText;
+  }
+}
+
+async function deletePatientAction(event, patientId) {
+  if (event) event.stopPropagation(); // Evitar abrir el expediente del paciente
+  
+  const patient = patientsData.find(p => p.id === patientId);
+  const name = patient ? patient.nombre : 'este paciente';
+  
+  const confirmDelete = confirm(`¿Estás seguro de que deseas eliminar permanentemente a ${name}? Esta acción no se puede deshacer y borrará también todas sus sesiones asociadas.`);
+  if (!confirmDelete) return;
+  
+  try {
+    await API.deletePaciente(patientId);
+    await loadPatients(); // Actualizar lista inmediatamente
+  } catch (err) {
+    alert('Error al eliminar paciente: ' + err.message);
+  }
 }
 
 function filterPatients(query) {

@@ -13,7 +13,10 @@ from core.database import (
     get_paciente_by_id,
     get_terapeuta_by_username,
     add_analisis_to_paciente,
-    get_sesion_by_id
+    get_sesion_by_id,
+    add_paciente,
+    update_paciente,
+    delete_paciente
 )
 
 # Import services and helpers
@@ -67,6 +70,63 @@ def api_pacientes():
         return jsonify(pacientes)
     except Exception as e:
         return jsonify({"status": "error", "message": f"Error del servidor: {str(e)}"}), 500
+
+@app.route('/api/pacientes', methods=['POST'])
+def api_add_paciente():
+    """Registra un nuevo paciente."""
+    data = request.json
+    if not data or 'nombre' not in data or 'fecha_nacimiento' not in data or 'id_evaluador' not in data:
+        return jsonify({"status": "error", "message": "Faltan parámetros requeridos (nombre, fecha_nacimiento, id_evaluador)."}), 400
+        
+    nombre = data['nombre']
+    fecha_nacimiento = data['fecha_nacimiento']
+    historial_clinico = data.get('historial_clinico', '')
+    id_evaluador = int(data['id_evaluador'])
+    tutor = data.get('tutor', 'No asignado')
+    numero_de_tutor = data.get('numero_de_tutor', 0)
+    
+    try:
+        success = add_paciente(nombre, fecha_nacimiento, historial_clinico, id_evaluador, tutor, numero_de_tutor)
+        if success:
+            return jsonify({"status": "success", "message": "Paciente registrado correctamente."}), 201
+        else:
+            return jsonify({"status": "error", "message": "No se pudo registrar el paciente."}), 500
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/pacientes/<int:id>', methods=['PUT'])
+def api_update_paciente(id):
+    """Actualiza un paciente existente."""
+    data = request.json
+    if not data or 'nombre' not in data or 'fecha_nacimiento' not in data:
+        return jsonify({"status": "error", "message": "Faltan parámetros requeridos (nombre, fecha_nacimiento)."}), 400
+        
+    nombre = data['nombre']
+    fecha_nacimiento = data['fecha_nacimiento']
+    historial_clinico = data.get('historial_clinico', '')
+    tutor = data.get('tutor', 'No asignado')
+    numero_de_tutor = data.get('numero_de_tutor', 0)
+    
+    try:
+        success = update_paciente(id, nombre, fecha_nacimiento, historial_clinico, tutor, numero_de_tutor)
+        if success:
+            return jsonify({"status": "success", "message": "Paciente actualizado correctamente."}), 200
+        else:
+            return jsonify({"status": "error", "message": "No se pudo actualizar el paciente."}), 500
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/pacientes/<int:id>', methods=['DELETE'])
+def api_delete_paciente(id):
+    """Elimina un paciente."""
+    try:
+        success = delete_paciente(id)
+        if success:
+            return jsonify({"status": "success", "message": "Paciente eliminado correctamente."}), 200
+        else:
+            return jsonify({"status": "error", "message": "No se pudo eliminar el paciente."}), 500
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/api/sesiones', methods=['GET'])
 def api_sesiones():

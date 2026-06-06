@@ -14,7 +14,11 @@
 
   <!-- VIEW 1: PATIENTS LIST -->
   <div id="patients-list-view">
-    <h1 class="section-title">Pacientes Asignados</h1>
+    <div class="header-actions-row">
+      <h1 class="section-title" style="margin-bottom: 0;">Pacientes Asignados</h1>
+      <button id="add-patient-btn" class="btn" style="width: auto;" onclick="openAddPatientModal()">➕ Agregar
+        Paciente</button>
+    </div>
 
     <div class="search-bar-container">
       <input type="text" id="patient-search" class="form-control" placeholder="🔍 Buscar paciente por nombre...">
@@ -196,6 +200,46 @@
           <div id="analysis-alert" class="alert alert-error hidden" style="margin-top: 15px;"></div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Modal for Add / Edit Patient -->
+  <div id="patient-modal" class="modal hidden">
+    <div class="modal-content">
+      <span class="modal-close" onclick="closePatientModal()">&times;</span>
+      <h2 id="modal-title" style="margin-bottom: 20px; font-weight: 700; color: var(--primary-color);">Agregar Nuevo
+        Paciente</h2>
+      <form id="patient-form" onsubmit="savePatient(event)">
+        <input type="hidden" id="modal-patient-id">
+
+        <div class="form-group">
+          <label for="modal-patient-name">Nombre Completo</label>
+          <input type="text" id="modal-patient-name" class="form-control" required placeholder="">
+        </div>
+
+        <div class="form-group">
+          <label for="modal-patient-birthdate">Fecha de Nacimiento</label>
+          <input type="date" id="modal-patient-birthdate" class="form-control" required>
+        </div>
+
+        <div class="form-group">
+          <label for="modal-patient-tutor">Nombre del Tutor</label>
+          <input type="text" id="modal-patient-tutor" class="form-control" required placeholder="">
+        </div>
+
+        <div class="form-group">
+          <label for="modal-patient-tutor-phone">Número de Teléfono del Tutor</label>
+          <input type="tel" id="modal-patient-tutor-phone" class="form-control" required placeholder="">
+        </div>
+
+        <div class="form-group">
+          <label for="modal-patient-history">Historial Clínico / Observaciones</label>
+          <textarea id="modal-patient-history" class="form-control" rows="4"
+            placeholder="Escribe observaciones clínicas iniciales..."></textarea>
+        </div>
+
+        <button type="submit" id="modal-submit-btn" class="btn" style="margin-top: 10px;">Guardar Paciente</button>
+      </form>
     </div>
   </div>
 

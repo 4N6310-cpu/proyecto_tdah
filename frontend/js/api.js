@@ -84,5 +84,68 @@ const API = {
       throw new Error(data.message || 'Error al procesar el video');
     }
     return data;
+  },
+
+  /**
+   * Add a new patient
+   */
+  async addPaciente(nombre, fechaNacimiento, historialClinico, idEvaluador, tutor, numeroDeTutor) {
+    const response = await fetch(`${API_BASE}/api/pacientes`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ 
+        nombre, 
+        fecha_nacimiento: fechaNacimiento, 
+        historial_clinico: historialClinico, 
+        id_evaluador: idEvaluador,
+        tutor: tutor,
+        numero_de_tutor: numeroDeTutor
+      })
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.message || 'Error al registrar paciente');
+    }
+    return data;
+  },
+
+  /**
+   * Update an existing patient
+   */
+  async updatePaciente(id, nombre, fechaNacimiento, historialClinico, tutor, numeroDeTutor) {
+    const response = await fetch(`${API_BASE}/api/pacientes/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ 
+        nombre, 
+        fecha_nacimiento: fechaNacimiento, 
+        historial_clinico: historialClinico,
+        tutor: tutor,
+        numero_de_tutor: numeroDeTutor
+      })
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.message || 'Error al actualizar paciente');
+    }
+    return data;
+  },
+
+  /**
+   * Delete a patient
+   */
+  async deletePaciente(id) {
+    const response = await fetch(`${API_BASE}/api/pacientes/${id}`, {
+      method: 'DELETE'
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.message || 'Error al eliminar paciente');
+    }
+    return data;
   }
 };
