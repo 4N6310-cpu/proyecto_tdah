@@ -3,7 +3,7 @@ import os
 import tempfile
 from analisis.detector import VideoDetector
 from analisis.behavioral_engine import BehavioralEngine
-from core.database import add_analisis_to_paciente
+from core.database import add_analisis_to_paciente, get_now_la_paz
 import datetime
 
 class VideoAnalysisUploader:
@@ -60,10 +60,11 @@ class VideoAnalysisUploader:
         resultados = engine.obtener_resultados_sesion()
         
         # Guardar en base de datos
-        identificador = f"A-{datetime.datetime.now().strftime('%y%m%d%H%M')}"
+        ahora_la_paz = get_now_la_paz()
+        identificador = f"A-{ahora_la_paz.strftime('%y%m%d%H%M')}"
         res_db = {
             "id": identificador,
-            "fecha": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "fecha": ahora_la_paz.strftime("%Y-%m-%d %H:%M"),
             "video_origen": os.path.basename(path_video),
             "atencion_porcentaje": resultados["atencion_porcentaje"],
             "eventos_distraccion": resultados["eventos_distraccion"],

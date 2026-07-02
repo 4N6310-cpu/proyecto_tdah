@@ -1,8 +1,24 @@
 import os
+from dotenv import load_dotenv
 import tempfile
 import datetime
+import pytz
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
+import cloudinary
+import cloudinary.uploader
+
+# Cargar variables de entorno
+load_dotenv()
+
+# Configuración de Cloudinary
+cloudinary.config(
+    cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME", "dld7vuxhy"), # Ejemplo o valor de entorno
+    api_key=os.getenv("CLOUDINARY_API_KEY", "your_api_key"),
+    api_secret=os.getenv("CLOUDINARY_API_SECRET", "your_api_secret"),
+    secure=True
+)
+
 
 # Import database core functions
 from core.database import (
@@ -102,12 +118,18 @@ def api_add_paciente():
     if 'foto_perfil' in request.files:
         file = request.files['foto_perfil']
         if file and file.filename != '':
-            from werkzeug.utils import secure_filename
-            import time
-            filename = secure_filename(f"new_{int(time.time())}_{file.filename}")
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            file.save(filepath)
-            foto_perfil = f"uploads/{filename}"
+            try:
+                # Subir directamente a Cloudinary
+                upload_result = cloudinary.uploader.upload(file, folder="proyecto_tdah/pacientes")
+                foto_perfil = upload_result.get("secure_url")
+            except Exception as e:
+                print(f"Error al subir a Cloudinary: {e}. Usando fallback local.")
+                from werkzeug.utils import secure_filename
+                import time
+                filename = secure_filename(f"new_{int(time.time())}_{file.filename}")
+                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                file.save(filepath)
+                foto_perfil = f"uploads/{filename}"
             
     try:
         success = add_paciente(nombre, fecha_nacimiento, historial_clinico, id_evaluador, tutor, numero_de_tutor, foto_perfil, genero)
@@ -141,11 +163,17 @@ def api_update_paciente(id):
     if 'foto_perfil' in request.files:
         file = request.files['foto_perfil']
         if file and file.filename != '':
-            from werkzeug.utils import secure_filename
-            filename = secure_filename(f"paciente_{id}_{file.filename}")
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            file.save(filepath)
-            foto_perfil = f"uploads/{filename}"
+            try:
+                # Subir directamente a Cloudinary
+                upload_result = cloudinary.uploader.upload(file, folder="proyecto_tdah/pacientes")
+                foto_perfil = upload_result.get("secure_url")
+            except Exception as e:
+                print(f"Error al subir a Cloudinary: {e}. Usando fallback local.")
+                from werkzeug.utils import secure_filename
+                filename = secure_filename(f"paciente_{id}_{file.filename}")
+                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                file.save(filepath)
+                foto_perfil = f"uploads/{filename}"
             
     # If no new photo uploaded, keep current photo path
     if not foto_perfil:

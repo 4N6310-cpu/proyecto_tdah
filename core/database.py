@@ -3,6 +3,12 @@ from dotenv import load_dotenv
 import mysql.connector
 from mysql.connector import Error
 import datetime
+import pytz
+
+def get_now_la_paz():
+    """Retorna la fecha y hora actual en la zona horaria de La Paz, Bolivia (naive)."""
+    tz = pytz.timezone('America/La_Paz')
+    return datetime.datetime.now(tz).replace(tzinfo=None)
 
 # Cargar variables de entorno desde el archivo .env
 load_dotenv()
@@ -165,7 +171,7 @@ def get_sesiones_by_paciente(id_paciente):
             else:
                 diag = f"Desempeño general moderado. Foco atencional fluctuante ({atencion_pct:.1f}%) con presencia de movimientos corporales compensatorios y fidgeting leve ({fidgeting_score:.1f}/10)."
             
-            fecha_str = r["fecha_hora"].strftime("%Y-%m-%d %H:%M") if r["fecha_hora"] else datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+            fecha_str = r["fecha_hora"].strftime("%Y-%m-%d %H:%M") if r["fecha_hora"] else get_now_la_paz().strftime("%Y-%m-%d %H:%M")
             
             timeline = generar_timeline_sintetico(duracion, atencion_pct, fidgeting_score)
             
@@ -261,10 +267,10 @@ def add_analisis_to_paciente(paciente_id, analisis):
     
     query = """
         INSERT INTO sesiones (id_paciente, fecha_hora, duracion, indice_atencion, hiperactividad, distraccion)
-        VALUES (%s, NOW(), %s, %s, %s, %s)
+        VALUES (%s, %s, %s, %s, %s, %s)
     """
     try:
-        cursor.execute(query, (paciente_id, duracion, indice_atencion, hiperactividad, distraccion))
+        cursor.execute(query, (paciente_id, get_now_la_paz(), duracion, indice_atencion, hiperactividad, distraccion))
         conexion.commit()
         return True
     except Error as e:
@@ -325,7 +331,7 @@ def get_sesion_by_id(session_id):
             else:
                 diag = f"Desempeño general moderado. Foco atencional fluctuante ({atencion_pct:.1f}%) con presencia de movimientos corporales compensatorios y fidgeting leve ({fidgeting_score:.1f}/10)."
             
-            fecha_str = r["fecha_hora"].strftime("%Y-%m-%d %H:%M") if r["fecha_hora"] else datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+            fecha_str = r["fecha_hora"].strftime("%Y-%m-%d %H:%M") if r["fecha_hora"] else get_now_la_paz().strftime("%Y-%m-%d %H:%M")
             
             timeline = generar_timeline_sintetico(duracion, atencion_pct, fidgeting_score)
             
