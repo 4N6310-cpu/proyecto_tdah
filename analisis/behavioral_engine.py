@@ -9,14 +9,14 @@ class BehavioralEngine:
         self.umbral_pitch = umbral_pitch
         self.umbral_fidgeting = umbral_fidgeting  # Umbral de movimiento de landmarks por frame
         
-        # Puntos 3D genéricos del modelo de cara para SolvePnP
+        # Puntos 3D genéricos del modelo de cara para SolvePnP (alineando la dirección de los ejes con la imagen 2D)
         self.model_points = np.array([
             (0.0, 0.0, 0.0),             # Punta de la nariz (Landmark 1)
-            (0.0, -330.0, -65.0),        # Mentón (Landmark 152)
-            (-225.0, 170.0, -135.0),     # Esquina externa ojo izquierdo (Landmark 33)
-            (225.0, 170.0, -135.0),      # Esquina externa ojo derecho (Landmark 263)
-            (-150.0, -150.0, -125.0),    # Esquina externa boca izquierda (Landmark 61)
-            (150.0, -150.0, -125.0)      # Esquina externa boca derecha (Landmark 291)
+            (0.0, 330.0, -65.0),         # Mentón (Landmark 152) (hacia abajo, positivo)
+            (-225.0, -170.0, -135.0),    # Esquina externa ojo izquierdo (Landmark 33) (hacia arriba, negativo)
+            (225.0, -170.0, -135.0),     # Esquina externa ojo derecho (Landmark 263) (hacia arriba, negativo)
+            (-150.0, 150.0, -125.0),     # Esquina externa boca izquierda (Landmark 61) (hacia abajo, positivo)
+            (150.0, 150.0, -125.0)       # Esquina externa boca derecha (Landmark 291) (hacia abajo, positivo)
         ], dtype=np.float64)
 
         # Estado del análisis de la sesión
@@ -107,6 +107,50 @@ class BehavioralEngine:
         
         return yaw, pitch, roll
 
+    def calcular_desvio_mirada(self, landmarks_cara, w, h):
+        """
+        Calcula si el paciente está desviando la mirada (gaze deviation) comparando la posición
+        de la pupila (iris) con los extremos de cada ojo en coordenadas reales.
+        """
+        # Verificar que el face mesh de MediaPipe cuente con los puntos del iris (mínimo 478 landmarks)
+        if len(landmarks_cara) < 478:
+            return False
+            
+        try:
+            # Ojo izquierdo: extremo externo=33, extremo interno=133, centro del iris=468
+            izq_ext = np.array([landmarks_cara[33][0] * w, landmarks_cara[33][1] * h])
+            izq_int = np.array([landmarks_cara[133][0] * w, landmarks_cara[133][1] * h])
+            izq_iris = np.array([landmarks_cara[468][0] * w, landmarks_cara[468][1] * h])
+            
+            # Ojo derecho: extremo externo=362, extremo interno=263, centro del iris=473
+            der_ext = np.array([landmarks_cara[362][0] * w, landmarks_cara[362][1] * h])
+            der_int = np.array([landmarks_cara[263][0] * w, landmarks_cara[263][1] * h])
+            der_iris = np.array([landmarks_cara[473][0] * w, landmarks_cara[473][1] * h])
+            
+            # Medir anchos de los ojos
+            ancho_izq = np.linalg.norm(izq_ext - izq_int)
+            ancho_der = np.linalg.norm(der_ext - der_int)
+            
+            if ancho_izq < 1.0 or ancho_der < 1.0:
+                return False
+                
+            # Calcular la posición horizontal relativa del iris (0.0 = externo, 1.0 = interno)
+            dist_ext_izq = np.linalg.norm(izq_ext - izq_iris)
+            ratio_izq = dist_ext_izq / ancho_izq
+            
+            dist_ext_der = np.linalg.norm(der_ext - der_iris)
+            ratio_der = dist_ext_der / ancho_der
+            
+            # Si el iris se desplaza lateralmente (fuera de la franja central 0.34 a 0.66)
+            desvio_izq = abs(ratio_izq - 0.5) > 0.16
+            desvio_der = abs(ratio_der - 0.5) > 0.16
+            
+            # Considerar desvío si al menos un ojo desvía la mirada de forma evidente
+            return desvio_izq or desvio_der
+            
+        except Exception:
+            return False
+
     def calcular_fidgeting_frame(self, pose_landmarks):
         """
         Calcula la cantidad de movimiento (fidgeting) entre el frame actual y el anterior.
@@ -148,12 +192,15 @@ class BehavioralEngine:
         cara_detectada = landmarks_datos["face_landmarks"] is not None
         pose_detectada = landmarks_datos["pose_landmarks"] is not None
         
-        # 1. Analizar Atención por Rotación Cefálica
+        # 1. Analizar Atención por Rotación Cefálica y Desvío de Ojos (Gaze Tracking)
         esta_distraido = False
         if cara_detectada:
             yaw, pitch, roll = self.estimar_pose_cabeza(landmarks_datos["face_landmarks"], w, h)
-            # Si supera los umbrales establecidos en Yaw o Pitch, se considera distraído
+            # Si supera los umbrales de rotación cefálica, se considera distraído
             if abs(yaw) > self.umbral_yaw or abs(pitch) > self.umbral_pitch:
+                esta_distraido = True
+            # Si la cabeza está de frente, evaluar el desvío ocular lateral (Iris tracking)
+            elif self.calcular_desvio_mirada(landmarks_datos["face_landmarks"], w, h):
                 esta_distraido = True
         else:
             # Si no se detecta el rostro del niño, se asume que está fuera de encuadre (distracción)

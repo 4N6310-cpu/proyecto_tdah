@@ -575,34 +575,10 @@ body {
 }
 
 /* =====================================================================
-   TABS INTERFACE (UPLOAD VS SIMULATE)
+   SESSION ANALYSIS INTERFACE
    ===================================================================== */
-.tabs-header {
-  display: flex;
-  border-bottom: 2px solid var(--border-color);
-  margin-bottom: 20px;
-}
 
-.tab-btn {
-  flex-grow: 1;
-  text-align: center;
-  padding: 12px;
-  cursor: pointer;
-  font-weight: 600;
-  color: var(--text-muted);
-  border-bottom: 2px solid transparent;
-  margin-bottom: -2px;
-  transition: var(--transition-smooth);
-}
 
-.tab-btn:hover {
-  color: var(--secondary-color);
-}
-
-.tab-btn.active {
-  color: var(--secondary-color);
-  border-bottom-color: var(--secondary-color);
-}
 
 .tab-pane {
   display: none;

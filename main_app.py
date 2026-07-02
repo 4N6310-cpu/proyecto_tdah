@@ -18,8 +18,6 @@ cloudinary.config(
     api_secret=os.getenv("CLOUDINARY_API_SECRET", "your_api_secret"),
     secure=True
 )
-
-
 # Import database core functions
 from core.database import (
     conectar_db,
@@ -40,6 +38,7 @@ from core.database import (
 from auth.services import AuthService
 from analisis.uploader import VideoAnalysisUploader
 from reportes.pdf_generator import PDFReportGenerator
+from core.storage import StorageContext
 
 # Initialize Flask with frontend folder as static source
 app = Flask(__name__, static_folder='frontend', static_url_path='')
@@ -49,6 +48,10 @@ CORS(app) # Enable Cross-Origin Resource Sharing for easy API access
 UPLOAD_FOLDER = os.path.join(app.root_path, 'frontend', 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+UPLOAD_FOLDER_STATIC = os.path.join(app.root_path, 'frontend', 'static', 'uploads')
+os.makedirs(UPLOAD_FOLDER_STATIC, exist_ok=True)
+app.config['UPLOAD_FOLDER_STATIC'] = UPLOAD_FOLDER_STATIC
 
 @app.route('/')
 def index():
@@ -119,17 +122,11 @@ def api_add_paciente():
         file = request.files['foto_perfil']
         if file and file.filename != '':
             try:
-                # Subir directamente a Cloudinary
-                upload_result = cloudinary.uploader.upload(file, folder="proyecto_tdah/pacientes")
-                foto_perfil = upload_result.get("secure_url")
+                storage_ctx = StorageContext()
+                foto_perfil = storage_ctx.save(file, default_filename="paciente_perfil.png")
             except Exception as e:
-                print(f"Error al subir a Cloudinary: {e}. Usando fallback local.")
-                from werkzeug.utils import secure_filename
-                import time
-                filename = secure_filename(f"new_{int(time.time())}_{file.filename}")
-                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                file.save(filepath)
-                foto_perfil = f"uploads/{filename}"
+                print(f"[STORAGE DEBUG] Error en la subida híbrida de foto_perfil: {str(e)}")
+                foto_perfil = None
             
     try:
         success = add_paciente(nombre, fecha_nacimiento, historial_clinico, id_evaluador, tutor, numero_de_tutor, foto_perfil, genero)
@@ -164,16 +161,11 @@ def api_update_paciente(id):
         file = request.files['foto_perfil']
         if file and file.filename != '':
             try:
-                # Subir directamente a Cloudinary
-                upload_result = cloudinary.uploader.upload(file, folder="proyecto_tdah/pacientes")
-                foto_perfil = upload_result.get("secure_url")
+                storage_ctx = StorageContext()
+                foto_perfil = storage_ctx.save(file, default_filename=f"paciente_{id}.png")
             except Exception as e:
-                print(f"Error al subir a Cloudinary: {e}. Usando fallback local.")
-                from werkzeug.utils import secure_filename
-                filename = secure_filename(f"paciente_{id}_{file.filename}")
-                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                file.save(filepath)
-                foto_perfil = f"uploads/{filename}"
+                print(f"[STORAGE DEBUG] Error en la subida híbrida de foto_perfil al actualizar: {str(e)}")
+                foto_perfil = None
             
     # If no new photo uploaded, keep current photo path
     if not foto_perfil:
@@ -269,6 +261,10 @@ def api_analisis_video():
             paciente_id=paciente_id,
             callback_progreso=None
         )
+        
+        # Log de depuración crudo solicitado por el usuario antes de responder
+        print(f"[DEBUG BACKEND] Análisis completado. Valores crudos finales -> Atención: {res.get('atencion_porcentaje')}%, Fidgeting: {res.get('fidgeting_score')}")
+        
         return jsonify({"status": "success", "result": res})
     except Exception as e:
         return jsonify({"status": "error", "message": f"Error en procesamiento de video: {str(e)}"}), 500
@@ -319,6 +315,14 @@ def api_reporte_pdf(session_id):
         return response
     except Exception as e:
         return f"Error crítico al generar reporte PDF: {str(e)}", 500
+
+@app.after_request
+def add_header(response):
+    """Deshabilita el almacenamiento en caché para todas las respuestas de la API."""
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '-1'
+    return response
 
 if __name__ == '__main__':
     # Run local dev server on port 5000

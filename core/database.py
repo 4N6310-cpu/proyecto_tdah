@@ -19,7 +19,8 @@ DB_CONFIG = {
     "user": os.getenv("DB_USER", "root"),
     "password": os.getenv("DB_PASSWORD", "angelo2oo4"),
     "database": os.getenv("DB_NAME", "feria"),
-    "port": int(os.getenv("DB_PORT", 3306))
+    "port": int(os.getenv("DB_PORT", 3306)),
+    "time_zone": "-04:00"
 }
 
 def conectar_db():
@@ -107,20 +108,6 @@ def get_pacientes_by_evaluador(id_evaluador):
     finally:
         cursor.close()
         conexion.close()    
-def generar_timeline_sintetico(duracion, atencion_pct, fidgeting_val):
-    import random
-    timeline = []
-    # Usar una semilla pseudo-aleatoria basada en la duración y atención para consistencia
-    random.seed(int(duracion) + int(atencion_pct))
-    for s in range(0, int(duracion) + 1):
-        att = 1 if random.random() * 100 < atencion_pct else 0
-        fid = max(0.0, min(10.0, fidgeting_val + random.uniform(-1.0, 1.0)))
-        timeline.append({
-            "segundo": s,
-            "atencion": att,
-            "fidgeting_score": round(fid, 2)
-        })
-    return timeline
 
 def get_sesiones_by_paciente(id_paciente):
     """Obtiene el histórico de análisis de la tabla sesiones de un niño."""
@@ -173,7 +160,7 @@ def get_sesiones_by_paciente(id_paciente):
             
             fecha_str = r["fecha_hora"].strftime("%Y-%m-%d %H:%M") if r["fecha_hora"] else get_now_la_paz().strftime("%Y-%m-%d %H:%M")
             
-            timeline = generar_timeline_sintetico(duracion, atencion_pct, fidgeting_score)
+            timeline = []
             
             sesiones_formateadas.append({
                 "id": r["id"],
@@ -333,7 +320,7 @@ def get_sesion_by_id(session_id):
             
             fecha_str = r["fecha_hora"].strftime("%Y-%m-%d %H:%M") if r["fecha_hora"] else get_now_la_paz().strftime("%Y-%m-%d %H:%M")
             
-            timeline = generar_timeline_sintetico(duracion, atencion_pct, fidgeting_score)
+            timeline = []
             
             return {
                 "id": r["id"],

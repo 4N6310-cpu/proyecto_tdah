@@ -9,6 +9,20 @@ let patientsData = [];
 let selectedPhotoBase64 = null;
 let selectedPhotoFile = null;
 
+/**
+ * Retorna la URL si es válida para cargarse externamente (Cloudinary o Base64), 
+ * o null si es una ruta local antigua o está vacía.
+ */
+function getValidImageSrc(url) {
+  if (!url || typeof url !== 'string') return null;
+  const trimmed = url.trim();
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('data:') || trimmed.startsWith('/static/uploads/')) {
+    return trimmed;
+  }
+  return null;
+}
+
+
 // Initialize SPA on load
 document.addEventListener('DOMContentLoaded', () => {
   initApp();
@@ -90,7 +104,7 @@ function bindLoginEvents() {
       // Direct demo logins for fast demonstration without DB if preferred:
       let sessionUser;
       if (username === 'doctor_perez' && password === 'doctor_perez') {
-        // Mock fallback doctor
+        // Demo fallback doctor
         sessionUser = { id: 1, nombre: 'Dr. Alejandro Pérez', usuario: 'doctor_perez', rol: 'Administrador' };
       } else {
         const res = await API.login(username, password);
@@ -272,8 +286,9 @@ function renderPatients(list) {
   }
 
   grid.innerHTML = list.map(pac => {
-    const avatarHtml = pac.foto_perfil 
-      ? `<img src="${pac.foto_perfil}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`
+    const validSrc = getValidImageSrc(pac.foto_perfil);
+    const avatarHtml = validSrc 
+      ? `<img src="${validSrc}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`
       : `👦`;
     return `
       <div class="patient-card" onclick="openPatientDossier(${pac.id})">
@@ -340,9 +355,10 @@ function openEditPatientModal(event, patientId) {
   // Load profile photo if it exists
   document.getElementById('modal-patient-photo').value = '';
   selectedPhotoFile = null;
-  if (patient.foto_perfil) {
-    selectedPhotoBase64 = patient.foto_perfil;
-    document.getElementById('modal-photo-preview').src = patient.foto_perfil;
+  const validSrc = getValidImageSrc(patient.foto_perfil);
+  if (validSrc) {
+    selectedPhotoBase64 = validSrc;
+    document.getElementById('modal-photo-preview').src = validSrc;
     document.getElementById('modal-photo-preview').style.display = 'block';
     document.getElementById('modal-photo-placeholder').style.display = 'none';
   } else {
@@ -512,8 +528,9 @@ async function openPatientDossier(patientId) {
 function renderDossier(paciente) {
   // 1. Render Banner
   const banner = document.getElementById('patient-banner');
-  const bannerAvatarHtml = paciente.foto_perfil
-    ? `<img src="${paciente.foto_perfil}" style="width: 100%; height: 100%; object-fit: cover;">`
+  const validSrc = getValidImageSrc(paciente.foto_perfil);
+  const bannerAvatarHtml = validSrc
+    ? `<img src="${validSrc}" style="width: 100%; height: 100%; object-fit: cover;">`
     : `<span style="font-size: 45px;">👦</span>`;
     
   banner.innerHTML = `
@@ -546,9 +563,18 @@ function renderDossier(paciente) {
   let avgFidgeting = 0;
 
   if (sessions.length > 0) {
-    const sumAtt = sessions.reduce((acc, s) => acc + s.atencion_porcentaje, 0);
-    const sumFid = sessions.reduce((acc, s) => acc + s.fidgeting_score, 0);
-    const sumDist = sessions.reduce((acc, s) => acc + s.distraccion, 0);
+    const sumAtt = sessions.reduce((acc, s) => {
+      const val = parseFloat(s.atencion_porcentaje);
+      return acc + (isNaN(val) ? 0 : val);
+    }, 0);
+    const sumFid = sessions.reduce((acc, s) => {
+      const val = parseFloat(s.fidgeting_score);
+      return acc + (isNaN(val) ? 0 : val);
+    }, 0);
+    const sumDist = sessions.reduce((acc, s) => {
+      const val = parseFloat(s.distraccion);
+      return acc + (isNaN(val) ? 0 : val);
+    }, 0);
 
     avgAttention = Math.round(sumAtt / sessions.length);
     avgFidgeting = parseFloat((sumFid / sessions.length).toFixed(1));
@@ -594,6 +620,15 @@ function renderEvolutionChart(sessions) {
   // Clean old instance to prevent hover artifacts
   if (window.myEvolutionChart) {
     window.myEvolutionChart.destroy();
+    window.myEvolutionChart = null;
+    console.log('DEBUG: Gráfico destruido y listo para nuevos datos');
+  }
+
+  // Handle detection warning indicator in UI if exists
+  const chartCard = ctx.canvas.parentElement.parentElement; // panel-card
+  const existingWarning = chartCard.querySelector('.detection-warning-banner');
+  if (existingWarning) {
+    existingWarning.remove();
   }
 
   if (sessions.length === 0) {
@@ -606,8 +641,51 @@ function renderEvolutionChart(sessions) {
   // Invert sessions to show them chronologically (from oldest to newest)
   const sortedSessions = [...sessions].reverse();
   const labels = sortedSessions.map(s => s.fecha.split(' ')[0]);
-  const attentionData = sortedSessions.map(s => s.atencion_porcentaje);
+  
+  let lastValidAttention = 70; // Valor neutro/promedio inicial
+  let lowQualityDetected = false;
+  
+  const attentionData = sortedSessions.map(s => {
+    let val = s.atencion_porcentaje;
+    // Si la atención es nula, indefinida o NaN (valores corruptos)
+    if (val === null || val === undefined || isNaN(val)) {
+      lowQualityDetected = true;
+      console.warn(`[DEBUG CHART] Métrica de atención nula o inválida en sesión del ${s.fecha}. Usando último conocido: ${lastValidAttention}%`);
+      return lastValidAttention;
+    }
+    // Si es un número válido (incluso 0), lo usamos directo
+    lastValidAttention = val;
+    return val;
+  });
+  
   const fidgetingData = sortedSessions.map(s => s.fidgeting_score);
+
+  // Inyectar banner si se detectan valores inválidos/0
+  if (lowQualityDetected) {
+    const warningDiv = document.createElement('div');
+    warningDiv.className = 'detection-warning-banner';
+    warningDiv.style.background = '#fef3c7';
+    warningDiv.style.border = '1px solid #f59e0b';
+    warningDiv.style.color = '#b45309';
+    warningDiv.style.padding = '8px 12px';
+    warningDiv.style.borderRadius = 'var(--radius-md)';
+    warningDiv.style.marginBottom = '12px';
+    warningDiv.style.fontSize = '12px';
+    warningDiv.style.fontWeight = '500';
+    warningDiv.style.display = 'flex';
+    warningDiv.style.alignItems = 'center';
+    warningDiv.style.gap = '8px';
+    warningDiv.innerHTML = `⚠️ <span><strong>Calidad de detección baja:</strong> Se detectaron valores inconsistentes o nulos en las métricas de atención. Mostrando últimos valores conocidos en el gráfico.</span>`;
+    
+    // Inserción limpia antes del canvas de Chart.js
+    ctx.canvas.parentElement.insertBefore(warningDiv, ctx.canvas);
+  }
+
+  console.log("[DEBUG JS] [UPDATE] Renderizando gráfica con nuevos datos de sesión:", {
+    labels: labels,
+    attentionData: attentionData,
+    fidgetingData: fidgetingData
+  });
 
   window.myEvolutionChart = new Chart(ctx, {
     type: 'line',
@@ -831,7 +909,7 @@ async function saveSessionNotes(sessionId) {
 
 
 /* =====================================================================
-   VIDEO PROCESSING & BEHAVIOR SIMULATOR API EXECUTIONS
+   VIDEO PROCESSING & BEHAVIOR ANALYSIS API EXECUTIONS
    ===================================================================== */
 async function executeVideoAnalysis() {
   const videoInput = document.getElementById('video-input');
@@ -874,6 +952,14 @@ async function executeVideoAnalysis() {
 
   try {
     const res = await API.subirVideo(currentPatient.id, file);
+    console.log("[DEBUG JS] [UPDATE] Objeto de respuesta de análisis completo recibido:", res);
+
+    // Destruir instancia previa del gráfico al recibir la respuesta
+    if (window.myEvolutionChart) {
+      window.myEvolutionChart.destroy();
+      window.myEvolutionChart = null;
+      console.log('DEBUG: Gráfico destruido y listo para nuevos datos');
+    }
 
     clearInterval(timer);
     progressBar.style.width = '100%';

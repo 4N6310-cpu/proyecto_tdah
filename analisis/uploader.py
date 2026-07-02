@@ -3,8 +3,23 @@ import os
 import tempfile
 from analisis.detector import VideoDetector
 from analisis.behavioral_engine import BehavioralEngine
-from core.database import add_analisis_to_paciente, get_now_la_paz
+from core.database import add_analisis_to_paciente
 import datetime
+
+# Variables globales para auditoría y persistencia de estado de la última sesión procesada
+promedio_atencional = 0.0
+contador_frames = 0
+fidgeting_acumulado = 0.0
+
+def limpiar_sesion_ia():
+    """
+    Establece en 0 o None todas las variables globales de cálculo de métricas de la sesión.
+    """
+    global promedio_atencional, contador_frames, fidgeting_acumulado
+    promedio_atencional = 0.0
+    contador_frames = 0
+    fidgeting_acumulado = 0.0
+    print('DEBUG: Variables IA reseteadas a cero')
 
 class VideoAnalysisUploader:
     @staticmethod
@@ -15,6 +30,9 @@ class VideoAnalysisUploader:
         
         - callback_progreso: función que acepta un float (0.0 a 1.0) para actualizar la barra de progreso en el Frontend.
         """
+        # Reseteo obligatorio de métricas globales al iniciar el análisis de video
+        limpiar_sesion_ia()
+
         cap = None
         detector = None
         try:
@@ -60,11 +78,10 @@ class VideoAnalysisUploader:
         resultados = engine.obtener_resultados_sesion()
         
         # Guardar en base de datos
-        ahora_la_paz = get_now_la_paz()
-        identificador = f"A-{ahora_la_paz.strftime('%y%m%d%H%M')}"
+        identificador = f"A-{datetime.datetime.now().strftime('%y%m%d%H%M')}"
         res_db = {
             "id": identificador,
-            "fecha": ahora_la_paz.strftime("%Y-%m-%d %H:%M"),
+            "fecha": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
             "video_origen": os.path.basename(path_video),
             "atencion_porcentaje": resultados["atencion_porcentaje"],
             "eventos_distraccion": resultados["eventos_distraccion"],
@@ -80,6 +97,14 @@ class VideoAnalysisUploader:
         
         add_analisis_to_paciente(paciente_id, res_db)
         
+        # Actualización de variables globales al terminar
+        global promedio_atencional, contador_frames, fidgeting_acumulado
+        contador_frames = frame_actual
+        promedio_atencional = resultados["atencion_porcentaje"]
+        fidgeting_acumulado = resultados["fidgeting_score"]
+        print("[DEBUG BACKEND] [UPDATE] Variables globales de métricas actualizadas con nuevos datos:")
+        print(f"  - promedio_atencional: {promedio_atencional}%")
+        print(f"  - contador_frames: {contador_frames}")
+        print(f"  - fidgeting_acumulado: {fidgeting_acumulado}")
+        
         return res_db
-
-
