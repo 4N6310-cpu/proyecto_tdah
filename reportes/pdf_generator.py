@@ -1,4 +1,6 @@
 import os
+import io
+import base64
 import tempfile
 import matplotlib
 matplotlib.use('Agg')
@@ -12,18 +14,21 @@ from reportlab.lib.units import inch
 
 class PDFReportGenerator:
     @staticmethod
-    def generar_grafico_timeline(timeline, path_salida):
+    def generar_grafico_timeline(timeline):
         """
-        Genera un gráfico de línea de tiempo con Matplotlib y lo guarda en disco de manera temporal.
+        Genera un gráfico de línea de tiempo con Matplotlib en memoria (Agg headless).
         Grafica la atención (área sombreada) y el Fidgeting (línea continua) segundo a segundo.
+        Retorna la imagen codificada en Base64.
         """
         if not timeline:
             # Crear un gráfico vacío por si no hay datos
             plt.figure(figsize=(7, 2.5))
             plt.text(0.5, 0.5, "Sin datos de comportamiento", ha='center', va='center')
-            plt.savefig(path_salida, bbox_inches='tight', dpi=150)
+            buf = io.BytesIO()
+            plt.savefig(buf, format='png', bbox_inches='tight', dpi=150)
             plt.close()
-            return
+            buf.seek(0)
+            return base64.b64encode(buf.read()).decode('utf-8')
 
         segundos = [d["segundo"] for d in timeline]
         atencion = [d["atencion"] for d in timeline]
@@ -61,9 +66,15 @@ class PDFReportGenerator:
         plt.title('Dinámica Temporal de la Sesión: Atención vs. Hiperactividad', fontsize=11, fontweight='bold', pad=10, color='#1A365D')
         fig.tight_layout()
         
-        # Guardar gráfico
-        plt.savefig(path_salida, bbox_inches='tight', dpi=200)
+        # Guardar gráfico en un buffer de bytes en memoria
+        buf = io.BytesIO()
+        plt.savefig(buf, format='png', bbox_inches='tight', dpi=200)
         plt.close()
+        buf.seek(0)
+        
+        # Convertir el contenido del buffer a Base64
+        imagen_base64 = base64.b64encode(buf.read()).decode('utf-8')
+        return imagen_base64
 
     @classmethod
     def generar_pdf_clinico(cls, paciente, analisis, path_salida):
@@ -238,17 +249,17 @@ class PDFReportGenerator:
         story.append(Spacer(1, 15))
         
         # ---- GRÁFICO DE LÍNEA DE TIEMPO (Matplotlib insertado en PDF) ----
-        # Crear gráfico en archivo temporal
-        fd, temp_img_path = tempfile.mkstemp(suffix=".png")
-        os.close(fd)
-        
         try:
             # Recuperar timeline si existe
             timeline = analisis.get("timeline", [])
-            cls.generar_grafico_timeline(timeline, temp_img_path)
+            grafico_base64 = cls.generar_grafico_timeline(timeline)
             
-            # Insertar en ReportLab
-            grafico_flowable = Image(temp_img_path, width=7*inch, height=2.8*inch)
+            # Decodificar Base64 a un buffer de bytes para ReportLab
+            img_data = base64.b64decode(grafico_base64)
+            img_buffer = io.BytesIO(img_data)
+            
+            # Insertar en ReportLab desde el buffer de memoria sin escribir en disco
+            grafico_flowable = Image(img_buffer, width=7*inch, height=2.8*inch)
             
             story.append(KeepTogether([
                 Paragraph("ANÁLISIS DE DINÁMICA DE COMPORTAMIENTO (LÍNEA DE TIEMPO)", style_subtitulo),
@@ -294,12 +305,5 @@ class PDFReportGenerator:
         
         # Construir el PDF
         doc.build(story)
-        
-        # Limpieza de imagen temporal
-        try:
-            if os.path.exists(temp_img_path):
-                os.remove(temp_img_path)
-        except Exception:
-            pass
             
         return path_salida
