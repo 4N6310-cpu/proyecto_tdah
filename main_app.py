@@ -212,30 +212,7 @@ def api_update_session_notes(id):
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
-@app.route('/api/analisis/simular', methods=['POST'])
-def api_analisis_simular():
-    """Generates a stochastic ADHD visual attention and hyperactivity analysis session."""
-    data = request.json
-    if not data or 'paciente_id' not in data:
-        return jsonify({"status": "error", "message": "Faltan parámetros requeridos para la simulación."}), 400
-        
-    paciente_id = int(data['paciente_id'])
-    video_name = data.get('video_name', 'sesion_simulada.mp4')
-    atencion = float(data.get('atencion', 68.0))
-    hiperactividad = float(data.get('hiperactividad', 5.5))
-    duracion_seg = int(data.get('duracion_seg', 120))
-    
-    try:
-        res = VideoAnalysisUploader.ejecutar_analisis_simulado(
-            paciente_id=paciente_id,
-            video_name=video_name,
-            atencion=atencion,
-            hiperactividad=hiperactividad,
-            duracion_seg=duracion_seg
-        )
-        return jsonify({"status": "success", "result": res})
-    except Exception as e:
-        return jsonify({"status": "error", "message": f"Error al guardar simulación: {str(e)}"}), 500
+
 
 @app.route('/api/analisis/video', methods=['POST'])
 def api_analisis_video():
@@ -249,38 +226,23 @@ def api_analisis_video():
     if video_file.filename == '':
         return jsonify({"status": "error", "message": "El archivo de video provisto está vacío."}), 400
         
-    temp_video_path = None
     try:
-        # Save video temporarily on disk for CV2 loading
-        temp_video = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
-        try:
-            video_file.save(temp_video)
-            temp_video_path = temp_video.name
-        finally:
-            temp_video.close()
-            
-        try:
-            # Process using MediaPipe and BehavioralEngine
-            res = VideoAnalysisUploader.procesar_archivo_video(
-                path_video=temp_video_path,
-                paciente_id=paciente_id,
-                callback_progreso=None # UI simulates loading asynchronously
-            )
-            return jsonify({"status": "success", "result": res})
-        finally:
-            # Safeguard cleanup
-            if temp_video_path and os.path.exists(temp_video_path):
-                try:
-                    os.remove(temp_video_path)
-                except Exception as cleanup_err:
-                    app.logger.error(f"Error al eliminar archivo temporal {temp_video_path}: {cleanup_err}")
+        from werkzeug.utils import secure_filename
+        import time
+        
+        # Guardar el archivo en la carpeta local de uploads
+        filename = secure_filename(f"video_{paciente_id}_{int(time.time())}_{video_file.filename}")
+        video_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        video_file.save(video_path)
+        
+        # Procesar usando MediaPipe y BehavioralEngine desde la carpeta uploads
+        res = VideoAnalysisUploader.procesar_archivo_video(
+            path_video=video_path,
+            paciente_id=paciente_id,
+            callback_progreso=None
+        )
+        return jsonify({"status": "success", "result": res})
     except Exception as e:
-        # Fallback cleanup in case of failure before or during processing
-        if temp_video_path and os.path.exists(temp_video_path):
-            try:
-                os.remove(temp_video_path)
-            except Exception:
-                pass
         return jsonify({"status": "error", "message": f"Error en procesamiento de video: {str(e)}"}), 500
 
 @app.route('/api/reportes/pdf/<int:session_id>', methods=['GET'])

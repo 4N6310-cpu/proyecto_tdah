@@ -81,37 +81,4 @@ class VideoAnalysisUploader:
         
         return res_db
 
-    @staticmethod
-    def ejecutar_analisis_simulado(paciente_id, video_name, atencion, hiperactividad, duracion_seg):
-        """
-        Ejecuta un análisis simulado en el backend y lo guarda en la BD del paciente.
-        Útil para pruebas rápidas de UI o entornos sin hardware/cámara.
-        """
-        engine = BehavioralEngine()
-        engine.simular_sesion_analisis(
-            duracion_segundos=duracion_seg,
-            atencion_media=atencion,
-            nivel_hiperactividad=hiperactividad
-        )
-        
-        resultados = engine.obtener_resultados_sesion()
-        
-        identificador = f"A-{datetime.datetime.now().strftime('%y%m%d%H%M')}"
-        res_db = {
-            "id": identificador,
-            "fecha": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
-            "video_origen": video_name,
-            "atencion_porcentaje": resultados["atencion_porcentaje"],
-            "eventos_distraccion": resultados["eventos_distraccion"],
-            "tiempo_distraccion_seg": resultados["tiempo_distraccion_seg"],
-            "fidgeting_score": resultados["fidgeting_score"],
-            "duracion_total_seg": resultados["duracion_total_seg"],
-            "diagnostico_auto": resultados["diagnostico_auto"],
-            "estado_pdf": "pendiente",
-            "timeline": resultados["timeline"],
-            "intervalos_distraccion": resultados["intervalos_distraccion"]
-        }
-        
-        add_analisis_to_paciente(paciente_id, res_db)
-        
-        return res_db
+

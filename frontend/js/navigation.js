@@ -149,9 +149,6 @@ function bindDashboardEvents() {
   // Video processing action
   document.getElementById('run-analysis-btn').addEventListener('click', executeVideoAnalysis);
 
-  // Behavior simulation action
-  document.getElementById('run-simulation-btn').addEventListener('click', executeSimulation);
-
   // Patient photo file input change listener
   const photoInput = document.getElementById('modal-patient-photo');
   if (photoInput) {
@@ -396,13 +393,77 @@ async function savePatient(event) {
   }
 }
 
+/**
+ * Custom promise-based patient deletion confirmation modal
+ */
+function confirmPatientDeletion(patientName) {
+  return new Promise((resolve) => {
+    const modal = document.getElementById('delete-patient-confirm-modal');
+    const nameEl = document.getElementById('confirm-patient-name');
+    const acceptBtn = document.getElementById('confirm-accept-btn');
+    const cancelBtn = document.getElementById('confirm-cancel-btn');
+    
+    if (!modal || !acceptBtn || !cancelBtn) {
+      // Fallback to native confirm if modal elements are missing
+      resolve(confirm(`¿Estás seguro de que deseas eliminar permanentemente a ${patientName}? Esta acción no se puede deshacer y borrará también todas sus sesiones asociadas.`));
+      return;
+    }
+    
+    // Set patient name
+    if (nameEl) {
+      nameEl.innerText = patientName;
+    }
+    
+    // Show modal
+    modal.classList.remove('hidden');
+    
+    // Focus accept button for accessibility
+    acceptBtn.focus();
+    
+    const handleOutsideClick = (e) => {
+      if (e.target === modal) {
+        handleCancel();
+      }
+    };
+    
+    const handleKeyPress = (e) => {
+      if (e.key === 'Escape') {
+        handleCancel();
+      }
+    };
+    
+    const handleAccept = () => {
+      cleanup();
+      resolve(true);
+    };
+    
+    const handleCancel = () => {
+      cleanup();
+      resolve(false);
+    };
+    
+    const cleanup = () => {
+      modal.classList.add('hidden');
+      acceptBtn.removeEventListener('click', handleAccept);
+      cancelBtn.removeEventListener('click', handleCancel);
+      modal.removeEventListener('click', handleOutsideClick);
+      document.removeEventListener('keydown', handleKeyPress);
+    };
+    
+    acceptBtn.addEventListener('click', handleAccept);
+    cancelBtn.addEventListener('click', handleCancel);
+    modal.addEventListener('click', handleOutsideClick);
+    document.addEventListener('keydown', handleKeyPress);
+  });
+}
+
 async function deletePatientAction(event, patientId) {
   if (event) event.stopPropagation(); // Evitar abrir el expediente del paciente
   
   const patient = patientsData.find(p => p.id === patientId);
   const name = patient ? patient.nombre : 'este paciente';
   
-  const confirmDelete = confirm(`¿Estás seguro de que deseas eliminar permanentemente a ${name}? Esta acción no se puede deshacer y borrará también todas sus sesiones asociadas.`);
+  const confirmDelete = await confirmPatientDeletion(name);
   if (!confirmDelete) return;
   
   try {
@@ -767,25 +828,7 @@ async function saveSessionNotes(sessionId) {
   }
 }
 
-/* =====================================================================
-   TABS MANAGEMENT (REAL VIDEO UPLOAD VS SIMULATOR)
-   ===================================================================== */
-function switchAnalysisTab(tab) {
-  // Deactivate all
-  document.getElementById('tab-btn-upload').classList.remove('active');
-  document.getElementById('tab-btn-simulate').classList.remove('active');
-  document.getElementById('tab-pane-upload').classList.remove('active');
-  document.getElementById('tab-pane-simulate').classList.remove('active');
 
-  // Activate selected
-  if (tab === 'upload') {
-    document.getElementById('tab-btn-upload').classList.add('active');
-    document.getElementById('tab-pane-upload').classList.add('active');
-  } else {
-    document.getElementById('tab-btn-simulate').classList.add('active');
-    document.getElementById('tab-pane-simulate').classList.add('active');
-  }
-}
 
 /* =====================================================================
    VIDEO PROCESSING & BEHAVIOR SIMULATOR API EXECUTIONS
@@ -850,64 +893,7 @@ async function executeVideoAnalysis() {
   }
 }
 
-async function executeSimulation() {
-  const alertEl = document.getElementById('analysis-alert');
-  const progressContainer = document.getElementById('analysis-progress-container');
-  const progressBar = document.getElementById('analysis-progress-bar');
-  const progressStatus = document.getElementById('progress-status');
-  const progressPercentage = document.getElementById('progress-percentage');
-  const runBtn = document.getElementById('run-simulation-btn');
 
-  const videoName = document.getElementById('sim-name').value.trim();
-  const atencion = parseFloat(document.getElementById('sim-attention').value);
-  const hiperactividad = parseFloat(document.getElementById('sim-fidgeting').value);
-  const duracion = parseInt(document.getElementById('sim-duration').value);
-
-  alertEl.classList.add('hidden');
-  progressContainer.classList.remove('hidden');
-  runBtn.disabled = true;
-
-  // Process simulation animation (fast 2 seconds sleep equivalent)
-  progressBar.style.width = '0%';
-  progressPercentage.innerText = '0%';
-  progressStatus.innerText = 'Corriendo algoritmos clínicos estocásticos...';
-
-  let pct = 0;
-  const timer = setInterval(() => {
-    if (pct < 90) {
-      pct += 15;
-      progressBar.style.width = `${pct}%`;
-      progressPercentage.innerText = `${pct}%`;
-    }
-  }, 300);
-
-  try {
-    await API.simularAnalisis({
-      paciente_id: currentPatient.id,
-      video_name: videoName,
-      atencion: atencion,
-      hiperactividad: hiperactividad,
-      duracion_seg: duracion
-    });
-
-    clearInterval(timer);
-    progressBar.style.width = '100%';
-    progressPercentage.innerText = '100%';
-    progressStatus.innerText = 'Simulación completada y guardada en MySQL...';
-
-    setTimeout(async () => {
-      // Reload patient dossier
-      await openPatientDossier(currentPatient.id);
-      runBtn.disabled = false;
-    }, 1200);
-  } catch (err) {
-    clearInterval(timer);
-    progressContainer.classList.add('hidden');
-    alertEl.innerText = err.message || 'Error durante la simulación.';
-    alertEl.classList.remove('hidden');
-    runBtn.disabled = false;
-  }
-}
 
 /* =====================================================================
    HELPER UTILITIES

@@ -1,13 +1,19 @@
+import os
+from dotenv import load_dotenv
 import mysql.connector
 from mysql.connector import Error
 import datetime
 
-# CONFIGURACIÓN DE TU INSTANCIA DE MYSQL WORKBENCH
+# Cargar variables de entorno desde el archivo .env
+load_dotenv()
+
+# CONFIGURACIÓN DE TU INSTANCIA DE MYSQL WORKBENCH / NUBE
 DB_CONFIG = {
-    "host": "localhost",       # Cambiar si tu Workbench está en la nube o en otro servidor
-    "user": "root",            # Tu usuario de MySQL
-    "password": "angelo2oo4", # Reemplaza con tu contraseña de MySQL Workbench
-    "database": "feria"        # Nombre exacto de tu base de datos
+    "host": os.getenv("DB_HOST", "localhost"),
+    "user": os.getenv("DB_USER", "root"),
+    "password": os.getenv("DB_PASSWORD", "angelo2oo4"),
+    "database": os.getenv("DB_NAME", "feria"),
+    "port": int(os.getenv("DB_PORT", 3306))
 }
 
 def conectar_db():
@@ -17,7 +23,7 @@ def conectar_db():
         if conexion.is_connected():
             return conexion
     except Error as e:
-        print(f"Error crítico al conectar a MySQL Workbench: {e}")
+        print(f"Error crítico al conectar a la base de datos: {e}")
         return None
 
 # =====================================================================

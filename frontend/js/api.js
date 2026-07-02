@@ -48,23 +48,7 @@ const API = {
     return data; // Expected { paciente, sesiones }
   },
 
-  /**
-   * Trigger stochastic AI simulation for clinical demo
-   */
-  async simularAnalisis(params) {
-    const response = await fetch(`${API_BASE}/api/analisis/simular`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(params)
-    });
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data.message || 'Error en la simulación');
-    }
-    return data;
-  },
+
 
   /**
    * Upload video file and run actual OpenCV + MediaPipe analysis

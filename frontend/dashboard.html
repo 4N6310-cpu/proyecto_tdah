@@ -106,9 +106,12 @@
         <!-- Medical Notes Card -->
         <div class="panel-card">
           <h2 class="panel-title">Notas del Expediente</h2>
-          <textarea id="patient-notes-field" class="form-control" placeholder="Escribe observaciones generales del expediente aquí..." style="min-height: 120px; resize: vertical; margin-bottom: 12px;"></textarea>
+          <textarea id="patient-notes-field" class="form-control"
+            placeholder="Escribe observaciones generales del expediente aquí..."
+            style="min-height: 120px; resize: vertical; margin-bottom: 12px;"></textarea>
           <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
-            <button id="save-patient-notes-btn" class="btn" style="width: auto; padding: 8px 16px; font-size: 13px;" onclick="savePatientNotes()">Guardar Notas de Expediente</button>
+            <button id="save-patient-notes-btn" class="btn" style="width: auto; padding: 8px 16px; font-size: 13px;"
+              onclick="savePatientNotes()">Guardar Notas de Expediente</button>
             <span id="patient-notes-status" style="font-size: 13px; font-weight: 600;"></span>
           </div>
         </div>
@@ -119,16 +122,8 @@
         <div class="panel-card">
           <h2 class="panel-title">Nueva Sesión de Análisis</h2>
 
-          <!-- Tabs Navigation -->
-          <div class="tabs-header">
-            <div id="tab-btn-upload" class="tab-btn active" onclick="switchAnalysisTab('upload')">🎥 Subir Video Real
-            </div>
-            <div id="tab-btn-simulate" class="tab-btn" onclick="switchAnalysisTab('simulate')">🤖 Simular Análisis IA
-            </div>
-          </div>
-
-          <!-- TAB 1: UPLOAD VIDEO -->
-          <div id="tab-pane-upload" class="tab-pane active">
+          <!-- Formulario de Carga Directo -->
+          <div id="tab-pane-upload" class="tab-pane active" style="padding-top: 10px;">
             <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">
               Sube una sesión de video en formato MP4 o AVI para analizar la mirada y el movimiento con algoritmos de
               visión artificial.
@@ -142,52 +137,7 @@
               <input type="file" id="video-input" accept="video/mp4, video/avi" style="display: none;">
             </div>
 
-            <button id="run-analysis-btn" class="btn" disabled>Ejecutar Análisis de Video</button>
-          </div>
-
-          <!-- TAB 2: CLINICAL SIMULATION -->
-          <div id="tab-pane-simulate" class="tab-pane">
-            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">
-              Ajusta parámetros estadísticos para generar un análisis clínico simulado y registrarlo inmediatamente.
-            </p>
-
-            <!-- Video Name Input -->
-            <div class="form-group">
-              <label for="sim-name">Nombre de Video Simulado</label>
-              <input type="text" id="sim-name" class="form-control" value="sesion_terapia_simulada.mp4">
-            </div>
-
-            <!-- Attention Slider -->
-            <div class="range-slider-group">
-              <div class="range-slider-row">
-                <span>Atención Media Sostenida</span>
-                <span id="sim-attention-lbl" style="font-weight:600; color:var(--success);">68%</span>
-              </div>
-              <input type="range" id="sim-attention" class="range-slider" min="20" max="100" value="68"
-                oninput="document.getElementById('sim-attention-lbl').innerText = this.value + '%'">
-            </div>
-
-            <!-- Fidgeting Slider -->
-            <div class="range-slider-group">
-              <div class="range-slider-row">
-                <span>Frecuencia de Fidgeting / Hiperactividad</span>
-                <span id="sim-fidgeting-lbl" style="font-weight:600; color:var(--danger);">5.5 / 10</span>
-              </div>
-              <input type="range" id="sim-fidgeting" class="range-slider" min="0" max="10" step="0.1" value="5.5"
-                oninput="document.getElementById('sim-fidgeting-lbl').innerText = this.value + ' / 10'">
-            </div>
-
-            <!-- Duration Slider -->
-            <div class="range-slider-group">
-              <div class="range-slider-row">
-                <span>Duración de Actividad (segundos)</span>
-                <span id="sim-duration-lbl" style="font-weight:600; color:var(--primary-color);">120s</span>
-              </div>
-              <input type="range" id="sim-duration" class="range-slider" min="30" max="600" step="10" value="120"
-                oninput="document.getElementById('sim-duration-lbl').innerText = this.value + 's'">
-            </div>
-
-            <button id="run-simulation-btn" class="btn">Disparar Simulación de Comportamiento</button>
+            <button id="run-analysis-btn" class="btn" disabled>Subir y Analizar Video</button>
           </div>
 
           <!-- Common Analysis Progress Bar -->
@@ -217,12 +167,16 @@
         <input type="hidden" id="modal-patient-id">
 
         <!-- Selección de Foto de Perfil -->
-        <div class="form-group text-center" style="display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: 20px;">
-          <div class="profile-pic-container" onclick="document.getElementById('modal-patient-photo').click()" style="position: relative; width: 90px; height: 90px; border-radius: 50%; border: 3px solid var(--border-color); overflow: hidden; background: var(--background-light); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: var(--transition-smooth);">
-            <img id="modal-photo-preview" src="" alt="Vista previa" style="width: 100%; height: 100%; object-fit: cover; display: none;">
+        <div class="form-group text-center"
+          style="display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: 20px;">
+          <div class="profile-pic-container" onclick="document.getElementById('modal-patient-photo').click()"
+            style="position: relative; width: 90px; height: 90px; border-radius: 50%; border: 3px solid var(--border-color); overflow: hidden; background: var(--background-light); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: var(--transition-smooth);">
+            <img id="modal-photo-preview" src="" alt="Vista previa"
+              style="width: 100%; height: 100%; object-fit: cover; display: none;">
             <span id="modal-photo-placeholder" style="font-size: 45px;">👦</span>
           </div>
-          <button type="button" class="btn btn-secondary" style="width: auto; padding: 4px 12px; font-size: 12px;" onclick="document.getElementById('modal-patient-photo').click()">Seleccionar Foto</button>
+          <button type="button" class="btn btn-secondary" style="width: auto; padding: 4px 12px; font-size: 12px;"
+            onclick="document.getElementById('modal-patient-photo').click()">Seleccionar Foto</button>
           <input type="file" id="modal-patient-photo" accept="image/*" style="display: none;">
         </div>
 
@@ -264,6 +218,22 @@
 
         <button type="submit" id="modal-submit-btn" class="btn" style="margin-top: 10px;">Guardar Paciente</button>
       </form>
+    </div>
+  </div>
+
+  <!-- Modal for Delete Patient Confirmation -->
+  <div id="delete-patient-confirm-modal" class="custom-confirm-modal hidden">
+    <div class="custom-confirm-modal-content">
+      <div class="custom-confirm-modal-body">
+        <p class="custom-confirm-modal-text">
+          ¿Estás seguro de que deseas eliminar permanentemente a <strong id="confirm-patient-name">[Nombre del
+            Paciente]</strong>? Esta acción no se puede deshacer y borrará también todas sus sesiones asociadas.
+        </p>
+      </div>
+      <div class="custom-confirm-modal-footer">
+        <button id="confirm-cancel-btn" class="btn-confirm-cancel">Cancelar</button>
+        <button id="confirm-accept-btn" class="btn-confirm-accept">Eliminar</button>
+      </div>
     </div>
   </div>
 
